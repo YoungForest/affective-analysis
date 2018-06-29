@@ -34,6 +34,9 @@ class LirisDataset(Dataset):
 
         # train or test
         self.dataset = self.get_train_or_test(train, sets_file)
+
+    def get_input_dim(self):
+        return len(self.__getitem__(0)['input'])
         
     def get_train_or_test(self, train, sets_file):
         self.sets = pd.read_csv(sets_file, sep='\t')

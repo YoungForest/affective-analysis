@@ -7,9 +7,9 @@ from dalc_dataset import DalcDataset
 
 class DalcNet(nn.Module):
 
-    def __init__(self):
+    def __init__(self, input_dim):
         super(DalcNet, self).__init__()
-        self.fc1 = nn.Linear(3584, 100)
+        self.fc1 = nn.Linear(input_dim, 100)
         self.fc2 = nn.Linear(100, 8)
 
     def forward(self, x):
@@ -18,28 +18,56 @@ class DalcNet(nn.Module):
 
         return x
 
+def evaluate(net, testloader):
+    loss_test = 0.0
+    loss_emotion = [0.0] * 8
+    for i, data in enumerate(testloader, 0):
+        # get the inputs
+        inputs = data['input']
+        labels = data['labels']
+        inputs, labels = inputs.to(device), labels.to(device)
+
+        outputs = net(inputs)
+        loss = criterion(outputs, labels)
+        loss_test += loss.item()
+
+        for i in range(8):
+            loss = criterion(outputs[:, i], labels[:, i])
+            loss_emotion[i] += loss.item()
+
+    print('Test result: ')
+    emotions = ['arousal', 'excitement', 'pleasure', 'contentment', 'sleepiness', 'depression', 'misery', 'distress']
+    for i in range(8):
+        print('%s MSE: %.3f' % (emotions[i], loss_emotion[i] / len(testloader)))
+
+    print('MSE average: %.3f' % (loss_test / len(testloader)))
+    mse_list.append(loss_test / len(testloader))
+
+# Training on GPU
+device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+print(device)
+
+mse_list = []
+
 if __name__ == '__main__':
-    # Training on GPU
-    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-    print(device)
+    # Load and uniform DaLC Dataset
+    trainset = DalcDataset('output-resnet-34-kinetics.json', '/home/data_common/data_yangsen/videos', train=True, transform=True, ranking_file='filled-labels_features.csv', sets_file='cv_id_10.txt', sep=',')
+    trainloader = torch.utils.data.DataLoader(trainset, batch_size=4, shuffle=True)
+
+    testset = DalcDataset('output-resnet-34-kinetics.json', '/home/data_common/data_yangsen/videos', train=False, transform=True, ranking_file='filled-labels_features.csv', sets_file='cv_id_10.txt', sep=',')
+    testloader = torch.utils.data.DataLoader(testset, batch_size=4, shuffle=False, num_workers=1)
     
     # new a Neural Network instance
-    net = DalcNet()
+    net = DalcNet(trainset.get_input_dim())
     net.to(device)
-
+ 
     # define a Loss function and optimizer
     criterion = nn.MSELoss()
     optimizer = optim.SGD(net.parameters(), lr=0.001, momentum=0.9)
 
-    # Load and uniform DaLC Dataset
-    trainset = DalcDataset('output-resnet-34-kinetics.json', '/home/data_common/data_yangsen/videos', train=True, transform=True, ranking_file='filled-labels_features.csv', sets_file='cv_id_10.txt', sep=',')
-    trainloader = torch.utils.data.DataLoader(trainset, batch_size=4, shuffle=True)
-    
-    testset = DalcDataset('output-resnet-34-kinetics.json', '/home/data_common/data_yangsen/videos', train=False, transform=True, ranking_file='filled-labels_features.csv', sets_file='cv_id_10.txt', sep=',')
-    testloader = torch.utils.data.DataLoader(testset, batch_size=4, shuffle=False, num_workers=1)
 
     # train the network
-    for epoch in range(2): # Loop over the dataset multiple times
+    for epoch in range(50): # Loop over the dataset multiple times
 
         running_loss = 0.0
         for i, data in enumerate(trainloader, 0):
@@ -64,3 +92,6 @@ if __name__ == '__main__':
                 running_loss = 0.0
 
         print('Finished Training')
+        evaluate(net, testloader)
+
+    print(mse_list)
