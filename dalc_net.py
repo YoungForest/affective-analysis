@@ -39,6 +39,7 @@ def evaluate(net, testloader):
     emotions = ['arousal', 'excitement', 'pleasure', 'contentment', 'sleepiness', 'depression', 'misery', 'distress']
     for i in range(8):
         print('%s MSE: %.3f' % (emotions[i], loss_emotion[i] / len(testloader)))
+        emotions_mse_list[i].append(loss_emotion[i] / len(testloader))
 
     print('MSE average: %.3f' % (loss_test / len(testloader)))
     mse_list.append(loss_test / len(testloader))
@@ -48,7 +49,7 @@ device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 print(device)
 
 mse_list = []
-
+emotions_mse_list = [[], [], [], [], [], [], [], []]
 if __name__ == '__main__':
     # Load and uniform DaLC Dataset
     trainset = DalcDataset('output-resnet-34-kinetics.json', '/home/data_common/data_yangsen/videos', train=True, transform=True, ranking_file='filled-labels_features.csv', sets_file='cv_id_10.txt', sep=',')
@@ -95,3 +96,4 @@ if __name__ == '__main__':
         evaluate(net, testloader)
 
     print(mse_list)
+    print(emotions_mse_list)

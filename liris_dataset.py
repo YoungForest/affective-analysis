@@ -44,7 +44,7 @@ class LirisDataset(Dataset):
         if not train:
             dataset = [x for x in self.data_json if self.sets[self.sets['name']==x['video']].iloc[0]['set']==0]
         else:
-            dataset = [x for x in self.data_json if self.sets[self.sets['name']!=x['video']].iloc[0]['set']==0]
+            dataset = [x for x in self.data_json if self.sets[self.sets['name']!=x['video']].iloc[0]['set']!=0]
                 
         return dataset
 
@@ -70,7 +70,7 @@ class LirisDataset(Dataset):
         sample['valenceValue'] = self.scores[self.scores['name']==sample['video']]['valenceValue'].iloc[0]
         sample['arousalValue'] = self.scores[self.scores['name']==sample['video']]['arousalValue'].iloc[0]
 
-        return sample
+        return {'input': torch.from_numpy(np.array(sample['input'])).float(), 'labels': torch.from_numpy(np.array([sample['valenceValue'], sample['arousalValue']])).float}
 
 if __name__ == '__main__':
     liris = LirisDataset(json_file='output-liris-resnet-34-kinetics.json', root_dir='/home/data_common/data_yangsen/data', transform=True, ranking_file='ACCEDEranking.txt', sets_file='ACCEDEsets.txt', sep='\t')
