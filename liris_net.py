@@ -8,7 +8,7 @@ from liris_dataset import LirisDataset
 class LirisNet(nn.Module):
 
     def __init__(self, input_dim):
-        super(DalcNet, self).__init__()
+        super(LirisNet, self).__init__()
         self.fc1 = nn.Linear(input_dim, 100)
         self.fc2 = nn.Linear(100, 2)
 
@@ -31,14 +31,14 @@ def evaluate(net, testloader):
         loss = criterion(outputs, labels)
         loss_test += loss.item()
 
-        for i in range(8):
+        for i in range(2):
             loss = criterion(outputs[:, i], labels[:, i])
             loss_emotion[i] += loss.item()
 
     print('Test result: ')
     for i in range(2):
         print('%s MSE: %.3f' % (emotions[i], loss_emotion[i] / len(testloader)))
-        emotions_mse_list[i].append(loss_emotion[i] / len(testloader))
+        loss_emotion_epoch[i].append(loss_emotion[i] / len(testloader))
 
     print('MSE average: %.3f' % (loss_test / len(testloader)))
     mse_list.append(loss_test / len(testloader))
@@ -48,18 +48,23 @@ device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 print(device)
 
 mse_list = []
-loss_emotion = [[], []]
+emotions = ['valence', 'arousal']
+# record mse of two emotions every epoch
+loss_emotion_epoch = [[], []]
 
 if __name__ == '__main__':
     # Load and uniform DaLC Dataset
     trainset = LirisDataset(json_file='output-liris-resnet-34-kinetics.json', root_dir='/home/data_common/data_yangsen/data', transform=True, ranking_file='ACCEDEranking.txt', sets_file='ACCEDEsets.txt', sep='\t')
-    trainloader = torch.utils.data.DataLoader(trainset, batch_size=4, shuffle=True)
+    trainloader = torch.utils.data.DataLoader(trainset, batch_size=32, shuffle=True)
 
     testset = LirisDataset(json_file='output-liris-resnet-34-kinetics.json', root_dir='/home/data_common/data_yangsen/data', transform=True, ranking_file='ACCEDEranking.txt', sets_file='ACCEDEsets.txt', sep='\t')
     testloader = torch.utils.data.DataLoader(testset, batch_size=4, shuffle=False)
     
     # new a Neural Network instance
     net = LirisNet(trainset.get_input_dim())
+    if torch.cuda.device_count() > 1:
+        print("Let's use", torch.cuda.device_count(), "GPUs!")
+        net = nn.DataParallel(net)
     net.to(device)
  
     # define a Loss function and optimizer
@@ -94,6 +99,9 @@ if __name__ == '__main__':
 
         print('Finished Training')
         evaluate(net, testloader)
+
+    # Serialization semantics, save the trained model
+    torch.save(net.state_dict(), 'nn-1.pth')
 
     print(mse_list)
     print(emotions_mse_list)

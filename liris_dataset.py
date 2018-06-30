@@ -3,6 +3,8 @@ from torch.utils.data import Dataset, DataLoader
 import json
 import pandas as pd
 import itertools
+import torch
+import numpy as np
 
 class LirisDataset(Dataset):
     """Load liris database from json output by video-action classification
@@ -70,7 +72,7 @@ class LirisDataset(Dataset):
         sample['valenceValue'] = self.scores[self.scores['name']==sample['video']]['valenceValue'].iloc[0]
         sample['arousalValue'] = self.scores[self.scores['name']==sample['video']]['arousalValue'].iloc[0]
 
-        return {'input': torch.from_numpy(np.array(sample['input'])).float(), 'labels': torch.from_numpy(np.array([sample['valenceValue'], sample['arousalValue']])).float}
+        return {'input': torch.from_numpy(np.array(sample['input'])).float(), 'labels': torch.from_numpy(np.array([sample['valenceValue'], sample['arousalValue']])).float()}
 
 if __name__ == '__main__':
     liris = LirisDataset(json_file='output-liris-resnet-34-kinetics.json', root_dir='/home/data_common/data_yangsen/data', transform=True, ranking_file='ACCEDEranking.txt', sets_file='ACCEDEsets.txt', sep='\t')
