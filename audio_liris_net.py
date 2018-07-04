@@ -3,6 +3,7 @@ import torch.nn as nn
 import torch
 import torch.nn.functional as F
 from liris_dataset import LirisDataset
+import liris_dataset
 
 # Training on GPU
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")

@@ -7,6 +7,7 @@ import torch
 import numpy as np
 import os
 import librosa
+import pickle
 
 class LirisDataset(Dataset):
     """Load liris database from json output by video-action classification
@@ -106,7 +107,7 @@ def getLirisDataset(path, train=True):
     else:
         dataset = LirisDataset(json_file='output-resnet-101-kinetics.json', root_dir='/home/data_common/data_yangsen/data', audio_root_dir='/home/data_common/data_yangsen/audio', train=train, transform=True, ranking_file='ACCEDEranking.txt', sets_file='ACCEDEsets.txt', sep='\t')
         with open(path, 'wb') as out:
-        pickle.dump(dataset, out, pickle.HIGHEST_PROTOCOL) 
+            pickle.dump(dataset, out, pickle.HIGHEST_PROTOCOL) 
     assert dataset
 
     return dataset
