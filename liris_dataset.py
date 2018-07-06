@@ -8,6 +8,7 @@ import numpy as np
 import os
 import librosa
 import pickle
+from sklearn.preprocessing import MinMaxScaler
 
 class LirisDataset(Dataset):
     """Load liris database from json output by video-action classification
@@ -41,7 +42,17 @@ class LirisDataset(Dataset):
         self.audio_root_dir = audio_root_dir
         
         self.scores = pd.read_csv(ranking_file, sep=sep)
+
+        min_max_scaler = MinMaxScaler(feature_range=(-1, 1), copy=False)
         
+        valenceRank = self.scores[['valenceRank']].values.astype(float)
+        min_max_scaler.fit_transform(valenceRank)
+        self.scores['valenceRankRescaled'] = pd.DataFrame(valenceRank) 
+
+        arousalRank = self.scores[['arousalRank']].values.astype(float)
+        min_max_scaler.fit_transform(arousalRank)
+        self.scores['arousalRankRescaled'] = pd.DataFrame(arousalRank) 
+
         audio_max_length = 0
         # get audio information
         for video in self.data_json:
@@ -94,10 +105,10 @@ class LirisDataset(Dataset):
     def __getitem__(self, idx):
         sample = self.getitem_without_labels(idx)
 
-        sample['valenceValue'] = self.scores[self.scores['name']==sample['video']]['valenceValue'].iloc[0]
-        sample['arousalValue'] = self.scores[self.scores['name']==sample['video']]['arousalValue'].iloc[0]
+        sample['valenceScore'] = self.scores[self.scores['name']==sample['video']]['valenceRankRescaled'].iloc[0]
+        sample['arousalScore'] = self.scores[self.scores['name']==sample['video']]['arousalRankRescaled'].iloc[0]
 
-        return {'video': sample['video'], 'input': torch.from_numpy(np.array(sample['input'])).float(), 'labels': torch.from_numpy(np.array([sample['valenceValue'], sample['arousalValue']])).float(), 'mel': torch.from_numpy(np.concatenate((sample['mel'], np.zeros((128, self.audio_max_length - sample['mel'].shape[1]))), axis=1)).float()}
+        return {'video': sample['video'], 'input': torch.from_numpy(np.array(sample['input'])).float(), 'labels': torch.from_numpy(np.array([sample['valenceScore'], sample['arousalScore']])).float(), 'mel': torch.from_numpy(np.concatenate((sample['mel'], np.zeros((128, self.audio_max_length - sample['mel'].shape[1]))), axis=1)).float()}
 
 def getLirisDataset(path, train=True):
     dataset = None

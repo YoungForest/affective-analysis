@@ -4,6 +4,16 @@ import torch.nn.functional as F
 import torch.optim as optim
 import torchvision
 from liris_dataset import LirisDataset
+import liris_dataset
+
+# Training on GPU
+device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+print(device)
+
+mse_list = []
+emotions = ['valence', 'arousal']
+# record mse of two emotions every epoch
+loss_emotion_epoch = [[], []]
 
 class LirisNet(nn.Module):
 
@@ -19,6 +29,7 @@ class LirisNet(nn.Module):
         return x
 
 def evaluate(net, testloader):
+    criterion = nn.MSELoss()
     loss_test = 0.0
     loss_emotion = [0.0] * 2
     for i, data in enumerate(testloader, 0):
@@ -35,30 +46,22 @@ def evaluate(net, testloader):
             loss = criterion(outputs[:, i], labels[:, i])
             loss_emotion[i] += loss.item()
 
-    print('Test result: ')
+    print('test result: ')
     for i in range(2):
-        print('%s MSE: %.3f' % (emotions[i], loss_emotion[i] / len(testloader)))
+        print('%s mse: %f' % (emotions[i], loss_emotion[i] / len(testloader)))
         loss_emotion_epoch[i].append(loss_emotion[i] / len(testloader))
 
-    print('MSE average: %.3f' % (loss_test / len(testloader)))
+    print('mse average: %f' % (loss_test / len(testloader)))
     mse_list.append(loss_test / len(testloader))
 
-# Training on GPU
-device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-print(device)
-
-mse_list = []
-emotions = ['valence', 'arousal']
-# record mse of two emotions every epoch
-loss_emotion_epoch = [[], []]
-
 if __name__ == '__main__':
+    batch_size = 8
     # Load and uniform DaLC Dataset
     trainset = liris_dataset.getLirisDataset('liris-accede-train-dataset.pkl', train=True)
-    trainloader = torch.utils.data.DataLoader(trainset, batch_size=512, shuffle=True)
+    trainloader = torch.utils.data.DataLoader(trainset, batch_size=batch_size, shuffle=True)
 
     testset = liris_dataset.getLirisDataset('liris-accede-test-dataset.pkl', train=False)
-    testloader = torch.utils.data.DataLoader(testset, batch_size=512, shuffle=False)
+    testloader = torch.utils.data.DataLoader(testset, batch_size=batch_size, shuffle=False)
     
     # new a Neural Network instance
     net = LirisNet(trainset.get_input_dim())
@@ -72,9 +75,8 @@ if __name__ == '__main__':
     criterion = nn.MSELoss()
     optimizer = optim.SGD(net.parameters(), lr=0.001, momentum=0.9)
 
-
     # train the network
-    for epoch in range(50): # Loop over the dataset multiple times
+    for epoch in range(2): # Loop over the dataset multiple times
 
         running_loss = 0.0
         for i, data in enumerate(trainloader, 0):
@@ -97,12 +99,12 @@ if __name__ == '__main__':
             if i % 5 == 4:
                 print('[%d. %5d] loss: %.3f' % (epoch + 1, i + 1, running_loss / 5))
                 running_loss = 0.0
+        # Serialization semantics, save the trained model
+        torch.save(net.state_dict(), 'nn-video-only-epoch-%d.pth' %(epoch))
+
 
         print('Finished Training')
         evaluate(net, testloader)
-
-    # Serialization semantics, save the trained model
-    torch.save(net.state_dict(), 'nn-6.pth')
 
     print(mse_list)
     print(loss_emotion_epoch)
