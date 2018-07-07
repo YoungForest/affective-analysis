@@ -64,20 +64,15 @@ class AudioNet(nn.Module):
 
     def forward(self, x):
         # Max poolint over a (2, 2) window
-        x = self.getFeatures(x)
-        x = F.relu(self.fc1(x))
-        x = F.relu(self.fc2(x))
-        x = self.fc3(x)
-        return x
-
-    def getFeatures(self, x):
         x = F.max_pool2d(F.relu(self.bn1(self.conv1(x))), 2)
         x = F.max_pool2d(F.relu(self.bn2(self.conv2(x))), 2)
         x = F.max_pool2d(F.relu(self.bn3(self.conv3(x))), 2)
-        x = x.view(-1, self.num_flat_features(x))
-        
-        return x
-    
+        features = x.view(-1, self.num_flat_features(x))
+        x = F.relu(self.fc1(features))
+        x = F.relu(self.fc2(x))
+        x = self.fc3(x)
+        return x, features
+   
     def num_flat_features(self, x):
         size = x.size()[1:]
         num_features = 1
@@ -99,7 +94,7 @@ def main():
         print("Let's use", torch.cuda.device_count(), "GPUs!")
         net = nn.DataParallel(net)
     net.to(device)
-    # net.load_state_dict(torch.load('nn-2.pth'))
+    # net.load_state_dict(torch.load('nn-epoch-49.pth'))
  
     # define a Loss function and optimizer
     criterion = nn.MSELoss()
@@ -107,7 +102,7 @@ def main():
 
 
     # train the network
-    for epoch in range(2): # Loop over the dataset multiple times
+    for epoch in range(10): # Loop over the dataset multiple times
 
         running_loss = 0.0
         for i, data in enumerate(trainloader, 0):
@@ -133,7 +128,7 @@ def main():
                 running_loss = 0.0
 
         # Serialization semantics, save the trained model
-        torch.save(net.state_dict(), 'nn-audio-only-epoch-%d.pth' %(epoch))
+        torch.save(net.state_dict(), 'nn-audio-only-short-epoch-%d.pth' %(epoch))
 
         print('Finished Training')
         evaluate(net, testloader)

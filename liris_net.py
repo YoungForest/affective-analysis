@@ -5,6 +5,7 @@ import torch.optim as optim
 import torchvision
 from liris_dataset import LirisDataset
 import liris_dataset
+from torch.utils.data.sampler import SubsetRandomSampler
 
 # Training on GPU
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -17,9 +18,9 @@ loss_emotion_epoch = [[], []]
 
 class LirisNet(nn.Module):
 
-    def __init__(self, input_dim):
+    def __init__(self):
         super(LirisNet, self).__init__()
-        self.fc1 = nn.Linear(input_dim, 100)
+        self.fc1 = nn.Linear(57344, 100)
         self.fc2 = nn.Linear(100, 2)
 
     def forward(self, x):
@@ -58,13 +59,15 @@ if __name__ == '__main__':
     batch_size = 8
     # Load and uniform DaLC Dataset
     trainset = liris_dataset.getLirisDataset('liris-accede-train-dataset.pkl', train=True)
-    trainloader = torch.utils.data.DataLoader(trainset, batch_size=batch_size, shuffle=True)
+    validateset = liris_dataset.getLirisDataset('liris-accede-validate-dataset.pkl', train=True)
+    train_validateset = torch.utils.data.ConcatDataset([trainset, validateset])
+    trainloader = torch.utils.data.DataLoader(train_validateset, batch_size=batch_size, shuffle=True)
 
     testset = liris_dataset.getLirisDataset('liris-accede-test-dataset.pkl', train=False)
     testloader = torch.utils.data.DataLoader(testset, batch_size=batch_size, shuffle=False)
     
     # new a Neural Network instance
-    net = LirisNet(trainset.get_input_dim())
+    net = LirisNet()
     if torch.cuda.device_count() > 1:
         print("Let's use", torch.cuda.device_count(), "GPUs!")
         net = nn.DataParallel(net)
@@ -73,10 +76,11 @@ if __name__ == '__main__':
  
     # define a Loss function and optimizer
     criterion = nn.MSELoss()
-    optimizer = optim.SGD(net.parameters(), lr=0.001, momentum=0.9)
+    optimizer = optim.SGD(net.parameters(), lr=0.0001)
+    # print(net.parameters())
 
     # train the network
-    for epoch in range(2): # Loop over the dataset multiple times
+    for epoch in range(50): # Loop over the dataset multiple times
 
         running_loss = 0.0
         for i, data in enumerate(trainloader, 0):
@@ -87,12 +91,19 @@ if __name__ == '__main__':
 
             # zero the parameter gradients
             optimizer.zero_grad()
+            
+            # a = list(netgparameters())[0].clone()
+            # print(a.grad)
 
             # forward + backward + optimize
             outputs = net(inputs)
             loss = criterion(outputs, labels)
             loss.backward()
             optimizer.step()
+
+            # b = list(net.parameters())[0].clone()
+ 
+            # print(torch.equal(a.data, b.data))
 
             # print statistics
             running_loss += loss.item()

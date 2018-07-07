@@ -14,7 +14,7 @@ class LirisDataset(Dataset):
     """Load liris database from json output by video-action classification
     """
     
-    def __init__(self, json_file, root_dir, audio_root_dir, ranking_file, sets_file, train=True, sep=',', transform=None):
+    def __init__(self, json_file, root_dir, audio_root_dir, ranking_file, sets_file, train=True, validate=False, sep=',', transform=None):
         """
         Args:
             json_file (string): Path to the json file outputed from pre-trained model.
@@ -69,18 +69,21 @@ class LirisDataset(Dataset):
         self.audio_max_length = audio_max_length
 
         # train or test
-        self.dataset = self.get_train_or_test(train, sets_file)
+        self.dataset = self.get_train_or_test(train, validate, sets_file)
         
     def get_input_dim(self):
         return len(self.__getitem__(0)['input'])
         
-    def get_train_or_test(self, train, sets_file):
+    def get_train_or_test(self, train, validate, sets_file):
         self.sets = pd.read_csv(sets_file, sep='\t')
         dataset = None
         if not train:
             dataset = [x for x in self.data_json if self.sets[self.sets['name']==x['video']].iloc[0]['set']==0]
         else:
-            dataset = [x for x in self.data_json if self.sets[self.sets['name']==x['video']].iloc[0]['set']!=0]
+            if validate:
+                dataset = [x for x in self.data_json if self.sets[self.sets['name']==x['video']].iloc[0]['set']==2]
+            else:
+                dataset = [x for x in self.data_json if self.sets[self.sets['name']==x['video']].iloc[0]['set']==2]
                 
         return dataset
 
@@ -110,13 +113,13 @@ class LirisDataset(Dataset):
 
         return {'video': sample['video'], 'input': torch.from_numpy(np.array(sample['input'])).float(), 'labels': torch.from_numpy(np.array([sample['valenceScore'], sample['arousalScore']])).float(), 'mel': torch.from_numpy(np.concatenate((sample['mel'], np.zeros((128, self.audio_max_length - sample['mel'].shape[1]))), axis=1)).float()}
 
-def getLirisDataset(path, train=True):
+def getLirisDataset(path, train=True, validate=False):
     dataset = None
     if os.path.exists(path):
         with open(path, 'rb') as my_file:
             dataset = pickle.load(my_file)
     else:
-        dataset = LirisDataset(json_file='output-resnet-101-kinetics.json', root_dir='/home/data_common/data_yangsen/data', audio_root_dir='/home/data_common/data_yangsen/audio', train=train, transform=True, ranking_file='ACCEDEranking.txt', sets_file='ACCEDEsets.txt', sep='\t')
+        dataset = LirisDataset(json_file='output-resnet-101-kinetics.json', root_dir='/home/data_common/data_yangsen/data', audio_root_dir='/home/data_common/data_yangsen/audio', train=train, validate=validate, transform=True, ranking_file='ACCEDEranking.txt', sets_file='ACCEDEsets.txt', sep='\t')
         with open(path, 'wb') as out:
             pickle.dump(dataset, out, pickle.HIGHEST_PROTOCOL) 
     assert dataset
