@@ -27,7 +27,7 @@ def evaluate(net, testloader):
         inputs.unsqueeze_(1)
         inputs, labels = inputs.to(device), labels.to(device)
 
-        outputs = net(inputs)
+        outputs = net(inputs)[0]
         loss = criterion(outputs, labels)
         loss_test += loss.item()
 
@@ -51,6 +51,7 @@ class AudioNet(nn.Module):
         super(AudioNet, self).__init__()
         # 1 input image channel, 6 output channels, 5x5 square convolution
         # kernel
+        self.bn0 = nn.BatchNorm2d(1)
         self.conv1 = nn.Conv2d(1, 6, 5)
         self.bn1 = nn.BatchNorm2d(6)
         self.conv2 = nn.Conv2d(6, 16, 4)
@@ -64,9 +65,13 @@ class AudioNet(nn.Module):
 
     def forward(self, x):
         # Max poolint over a (2, 2) window
+        x = self.bn0(x)
         x = F.max_pool2d(F.relu(self.bn1(self.conv1(x))), 2)
         x = F.max_pool2d(F.relu(self.bn2(self.conv2(x))), 2)
         x = F.max_pool2d(F.relu(self.bn3(self.conv3(x))), 2)
+        # x = F.max_pool2d(F.relu(self.conv1(x)), 2)
+        # x = F.max_pool2d(F.relu(self.conv2(x)), 2)
+        # x = F.max_pool2d(F.relu(self.conv3(x)), 2)
         features = x.view(-1, self.num_flat_features(x))
         x = F.relu(self.fc1(features))
         x = F.relu(self.fc2(x))
@@ -98,7 +103,7 @@ def main():
  
     # define a Loss function and optimizer
     criterion = nn.MSELoss()
-    optimizer = optim.SGD(net.parameters(), lr=0.001, momentum=0.9)
+    optimizer = optim.SGD(net.parameters(), lr=0.0001)
 
 
     # train the network
@@ -116,7 +121,7 @@ def main():
             optimizer.zero_grad()
 
             # forward + backward + optimize
-            outputs = net(inputs)
+            outputs = net(inputs)[0]
             loss = criterion(outputs, labels)
             loss.backward()
             optimizer.step()
