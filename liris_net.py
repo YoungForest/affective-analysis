@@ -21,11 +21,13 @@ class LirisNet(nn.Module):
     def __init__(self):
         super(LirisNet, self).__init__()
         self.fc1 = nn.Linear(57344, 100)
+        self.bn1 = nn.BatchNorm1d(100)
         self.fc2 = nn.Linear(100, 2)
+        self.bn2 = nn.BatchNorm1d(2)
 
     def forward(self, x):
-        x = F.relu(self.fc1(x))
-        x = F.relu(self.fc2(x))
+        x = self.bn1(F.relu(self.fc1(x)))
+        x = self.bn2(F.relu(self.fc2(x)))
 
         return x
 
@@ -58,12 +60,12 @@ def evaluate(net, testloader):
 if __name__ == '__main__':
     batch_size = 8
     # Load and uniform DaLC Dataset
-    trainset = liris_dataset.getLirisDataset('liris-accede-train-dataset.pkl', train=True)
-    validateset = liris_dataset.getLirisDataset('liris-accede-validate-dataset.pkl', train=True)
+    trainset = liris_dataset.getLirisDataset('liris-accede-train-dataset.pkl', train=True, validate=False)
+    validateset = liris_dataset.getLirisDataset('liris-accede-validate-dataset.pkl', train=True, validate=True)
     train_validateset = torch.utils.data.ConcatDataset([trainset, validateset])
     trainloader = torch.utils.data.DataLoader(train_validateset, batch_size=batch_size, shuffle=True)
 
-    testset = liris_dataset.getLirisDataset('liris-accede-test-dataset.pkl', train=False)
+    testset = liris_dataset.getLirisDataset('liris-accede-test-dataset.pkl', train=False, validate=False)
     testloader = torch.utils.data.DataLoader(testset, batch_size=batch_size, shuffle=False)
     
     # new a Neural Network instance
