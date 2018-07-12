@@ -59,7 +59,7 @@ class LirisDataset(Dataset):
             file_name = os.path.splitext(video['video'])[0]
             file_path = os.path.join(self.audio_root_dir, file_name + '.wav')
             y, sr = librosa.load(file_path)
-            mel = librosa.feature.melspectrogram(y)
+            mel = librosa.feature.mfcc(y, sr=sr)
 
             video['mel'] = mel
 
@@ -111,7 +111,7 @@ class LirisDataset(Dataset):
         sample['valenceScore'] = self.scores[self.scores['name']==sample['video']]['valenceRankRescaled'].iloc[0]
         sample['arousalScore'] = self.scores[self.scores['name']==sample['video']]['arousalRankRescaled'].iloc[0]
 
-        return {'video': sample['video'], 'input': torch.from_numpy(np.array(sample['input'])).float(), 'labels': torch.from_numpy(np.array([sample['valenceScore'], sample['arousalScore']])).float(), 'mel': torch.from_numpy(np.concatenate((sample['mel'], np.zeros((128, self.audio_max_length - sample['mel'].shape[1]))), axis=1)).float()}
+        return {'video': sample['video'], 'input': torch.from_numpy(np.array(sample['input'])).float(), 'labels': torch.from_numpy(np.array([sample['valenceScore'], sample['arousalScore']])).float(), 'mel': torch.from_numpy(np.concatenate((sample['mel'], np.zeros((20, self.audio_max_length - sample['mel'].shape[1]))), axis=1)).float()}
 
 def getLirisDataset(path, train=True, validate=False):
     dataset = None
@@ -119,12 +119,25 @@ def getLirisDataset(path, train=True, validate=False):
         with open(path, 'rb') as my_file:
             dataset = pickle.load(my_file)
     else:
-        dataset = LirisDataset(json_file='output-resnet-101-kinetics.json', root_dir='/home/data_common/data_yangsen/data', audio_root_dir='/home/data_common/data_yangsen/audio', train=train, validate=validate, transform=True, ranking_file='ACCEDEranking.txt', sets_file='ACCEDEsets.txt', sep='\t')
+        dataset = LirisDataset(json_file='output-resnet-152-kinetics.json', root_dir='/home/data_common/data_yangsen/data', audio_root_dir='/home/data_common/data_yangsen/audio', train=train, validate=validate, transform=True, ranking_file='ACCEDEranking.txt', sets_file='ACCEDEsets.txt', sep='\t')
         with open(path, 'wb') as out:
             pickle.dump(dataset, out, pickle.HIGHEST_PROTOCOL) 
     assert dataset
 
     return dataset
+
+def getDataLoader():
+    batch_size = 32
+    # Load dataset
+    trainset = getLirisDataset('/home/data_common/data_yangsen/pkl/liris-accede-train-dataset-mfcc-152.pkl', train=True)
+    validateset = getLirisDataset('/home/data_common/data_yangsen/pkl/liris-accede-validate-dataset-mfcc-152.pkl', train=True, validate=True)
+    train_validateset = torch.utils.data.ConcatDataset([trainset, validateset])
+    trainloader = torch.utils.data.DataLoader(train_validateset, batch_size=batch_size, shuffle=True)
+
+    testset = getLirisDataset('/home/data_common/data_yangsen/pkl/liris-accede-test-dataset-mfcc-152.pkl', train=False)
+    testloader = torch.utils.data.DataLoader(testset, batch_size=batch_size, shuffle=False)
+
+    return trainloader, testloader
 
 if __name__ == '__main__':
     liris = LirisDataset(json_file='output-liris-resnet-34-kinetics.json', root_dir='/home/data_common/data_yangsen/data', audio_root_dir='/home/data_common/data_yangsen/audio', transform=True, ranking_file='ACCEDEranking.txt', sets_file='ACCEDEsets.txt', sep='\t')

@@ -4,6 +4,7 @@ import torch.nn.functional as F
 import torch.optim as optim
 import torchvision
 from liris_dataset import LirisDataset
+from liris_dataset import getDataLoader
 from audio_liris_net import AudioNet
 import liris_dataset
 
@@ -63,17 +64,11 @@ class AudioAndVideoNet(nn.Module):
         return x
 
 def main(audio_model_path):
-    batch_size = 32
-    # Load dataset
-    trainset = liris_dataset.getLirisDataset('liris-accede-train-dataset.pkl', train=True)
-    trainloader = torch.utils.data.DataLoader(trainset, batch_size=batch_size, shuffle=True)
-
-    testset = liris_dataset.getLirisDataset('liris-accede-test-dataset.pkl', train=False)
-    testloader = torch.utils.data.DataLoader(testset, batch_size=batch_size, shuffle=False)
+    trainloader, testloader = getDataLoader()
 
     global audio_net
     audio_net = AudioNet()
-    net = AudioAndVideoNet(32 * 13 * 95, 57344)
+    net = AudioAndVideoNet(32 * 15 * 97, 57344)
 
     if torch.cuda.device_count() > 1:
         print("Let's use", torch.cuda.device_count(), "GPUs!")

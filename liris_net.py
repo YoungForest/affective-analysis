@@ -4,6 +4,7 @@ import torch.nn.functional as F
 import torch.optim as optim
 import torchvision
 from liris_dataset import LirisDataset
+from liris_dataset import getDataLoader
 import liris_dataset
 from torch.utils.data.sampler import SubsetRandomSampler
 
@@ -20,13 +21,19 @@ class LirisNet(nn.Module):
 
     def __init__(self):
         super(LirisNet, self).__init__()
-        self.fc1 = nn.Linear(57344, 100)
-        self.bn1 = nn.BatchNorm1d(100)
-        self.fc2 = nn.Linear(100, 2)
+        self.fc10 = nn.Linear(57344, 100)
+        self.fc11 = nn.Linear(57344, 100)
+        self.bn1 = nn.BatchNorm1d(200)
+        self.fc2 = nn.Linear(200, 2)
         self.bn2 = nn.BatchNorm1d(2)
 
     def forward(self, x):
-        x = self.bn1(F.relu(self.fc1(x)))
+        x1 = self.fc10(x)
+        x2 = self.fc11(x)
+        x1 = F.tanh(x1)
+        x = torch.cat((x1, x2), 1)
+        x = self.bn1(x)
+        
         x = self.bn2(F.relu(self.fc2(x)))
 
         return x
@@ -58,16 +65,8 @@ def evaluate(net, testloader):
     mse_list.append(loss_test / len(testloader))
 
 if __name__ == '__main__':
-    batch_size = 8
-    # Load and uniform DaLC Dataset
-    trainset = liris_dataset.getLirisDataset('liris-accede-train-dataset.pkl', train=True, validate=False)
-    validateset = liris_dataset.getLirisDataset('liris-accede-validate-dataset.pkl', train=True, validate=True)
-    train_validateset = torch.utils.data.ConcatDataset([trainset, validateset])
-    trainloader = torch.utils.data.DataLoader(train_validateset, batch_size=batch_size, shuffle=True)
+    trainloader, testloader = getDataLoader()
 
-    testset = liris_dataset.getLirisDataset('liris-accede-test-dataset.pkl', train=False, validate=False)
-    testloader = torch.utils.data.DataLoader(testset, batch_size=batch_size, shuffle=False)
-    
     # new a Neural Network instance
     net = LirisNet()
     if torch.cuda.device_count() > 1:
@@ -94,18 +93,11 @@ if __name__ == '__main__':
             # zero the parameter gradients
             optimizer.zero_grad()
             
-            # a = list(netgparameters())[0].clone()
-            # print(a.grad)
-
             # forward + backward + optimize
             outputs = net(inputs)
             loss = criterion(outputs, labels)
             loss.backward()
             optimizer.step()
-
-            # b = list(net.parameters())[0].clone()
- 
-            # print(torch.equal(a.data, b.data))
 
             # print statistics
             running_loss += loss.item()

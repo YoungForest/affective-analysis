@@ -2,6 +2,7 @@ import torch.nn as nn
 import torch
 import random
 import liris_dataset
+from liris_dataset import getDataLoader
 from liris_net import evaluate
 from liris_net import device
 
@@ -14,8 +15,7 @@ class RandomNet(nn.Module):
         return torch.rand(x.shape[0], 2, device=device) * 2 -1
 
 if __name__ == '__main__':
-    testset = liris_dataset.getLirisDataset('liris-accede-test-dataset.pkl', train=False)
-    testloader = torch.utils.data.DataLoader(testset, batch_size=8, shuffle=False)
+    trainloader, testloader = getDataLoader()
 
     net = RandomNet()
     net.to(device)

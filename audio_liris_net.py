@@ -3,6 +3,7 @@ import torch.nn as nn
 import torch
 import torch.nn.functional as F
 from liris_dataset import LirisDataset
+from liris_dataset import getDataLoader
 import liris_dataset
 import torch.optim as optim
 
@@ -52,14 +53,14 @@ class AudioNet(nn.Module):
         # 1 input image channel, 6 output channels, 5x5 square convolution
         # kernel
         self.bn0 = nn.BatchNorm2d(1)
-        self.conv1 = nn.Conv2d(1, 6, 5)
+        self.conv1 = nn.Conv2d(1, 6, (1, 5))
         self.bn1 = nn.BatchNorm2d(6)
-        self.conv2 = nn.Conv2d(6, 16, 4)
+        self.conv2 = nn.Conv2d(6, 16, (1, 4))
         self.bn2 = nn.BatchNorm2d(16)
-        self.conv3 = nn.Conv2d(16, 32, (4, 5))
+        self.conv3 = nn.Conv2d(16, 32, (1, 1))
         self.bn3 = nn.BatchNorm2d(32)
         # an affine operation: y = Wx + b
-        self.fc1 = nn.Linear(32 * 13 * 95, 120)
+        self.fc1 = nn.Linear(32 * 10 * 97, 120)
         self.fc2 = nn.Linear(120, 84)
         self.fc3 = nn.Linear(84, 2)
 
@@ -67,15 +68,15 @@ class AudioNet(nn.Module):
         # Max poolint over a (2, 2) window
         x = self.bn0(x)
         x = F.max_pool2d(F.relu(self.bn1(self.conv1(x))), 2)
-        x = F.max_pool2d(F.relu(self.bn2(self.conv2(x))), 2)
-        x = F.max_pool2d(F.relu(self.bn3(self.conv3(x))), 2)
+        x = F.max_pool2d(F.relu(self.bn2(self.conv2(x))), (1, 2))
+        x = F.max_pool2d(F.relu(self.bn3(self.conv3(x))), (1, 2))
         # x = F.max_pool2d(F.relu(self.conv1(x)), 2)
         # x = F.max_pool2d(F.relu(self.conv2(x)), 2)
         # x = F.max_pool2d(F.relu(self.conv3(x)), 2)
         features = x.view(-1, self.num_flat_features(x))
         x = F.relu(self.fc1(features))
         x = F.relu(self.fc2(x))
-        x = self.fc3(x)
+        x = F.relu(self.fc3(x))
         return x, features
    
     def num_flat_features(self, x):
@@ -86,13 +87,7 @@ class AudioNet(nn.Module):
         return num_features
 
 def main():
-    batch_size = 4
-    # Load dataset
-    trainset = liris_dataset.getLirisDataset('liris-accede-train-dataset.pkl', train=True)
-    trainloader = torch.utils.data.DataLoader(trainset, batch_size=batch_size, shuffle=True)
-
-    testset = liris_dataset.getLirisDataset('liris-accede-test-dataset.pkl', train=False)
-    testloader = torch.utils.data.DataLoader(testset, batch_size=batch_size, shuffle=False)
+    trainloader, testloader = getDataLoader()
 
     net = AudioNet()
     if torch.cuda.device_count() > 1:
