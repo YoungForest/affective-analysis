@@ -119,7 +119,7 @@ def getLirisDataset(path, train=True, validate=False):
         with open(path, 'rb') as my_file:
             dataset = pickle.load(my_file)
     else:
-        dataset = LirisDataset(json_file='output-resnet-152-kinetics.json', root_dir='/home/data_common/data_yangsen/data', audio_root_dir='/home/data_common/data_yangsen/audio', train=train, validate=validate, transform=True, ranking_file='ACCEDEranking.txt', sets_file='ACCEDEsets.txt', sep='\t')
+        dataset = LirisDataset(json_file='output-resnext-101-kinetics.json', root_dir='/home/data_common/data_yangsen/data', audio_root_dir='/home/data_common/data_yangsen/audio', train=train, validate=validate, transform=True, ranking_file='ACCEDEranking.txt', sets_file='ACCEDEsets.txt', sep='\t')
         with open(path, 'wb') as out:
             pickle.dump(dataset, out, pickle.HIGHEST_PROTOCOL) 
     assert dataset
@@ -129,12 +129,12 @@ def getLirisDataset(path, train=True, validate=False):
 def getDataLoader():
     batch_size = 32
     # Load dataset
-    trainset = getLirisDataset('/home/data_common/data_yangsen/pkl/liris-accede-train-dataset-mfcc-152.pkl', train=True)
-    validateset = getLirisDataset('/home/data_common/data_yangsen/pkl/liris-accede-validate-dataset-mfcc-152.pkl', train=True, validate=True)
+    trainset = getLirisDataset('/home/data_common/data_yangsen/pkl/liris-accede-train-dataset-mfcc-resnext101.pkl', train=True)
+    validateset = getLirisDataset('/home/data_common/data_yangsen/pkl/liris-accede-validate-dataset-mfcc-resnext101.pkl', train=True, validate=True)
     train_validateset = torch.utils.data.ConcatDataset([trainset, validateset])
     trainloader = torch.utils.data.DataLoader(train_validateset, batch_size=batch_size, shuffle=True)
 
-    testset = getLirisDataset('/home/data_common/data_yangsen/pkl/liris-accede-test-dataset-mfcc-152.pkl', train=False)
+    testset = getLirisDataset('/home/data_common/data_yangsen/pkl/liris-accede-test-dataset-mfcc-resnext101.pkl', train=False)
     testloader = torch.utils.data.DataLoader(testset, batch_size=batch_size, shuffle=False)
 
     return trainloader, testloader

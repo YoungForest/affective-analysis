@@ -21,19 +21,13 @@ class LirisNet(nn.Module):
 
     def __init__(self):
         super(LirisNet, self).__init__()
-        self.fc10 = nn.Linear(57344, 100)
-        self.fc11 = nn.Linear(57344, 100)
+        self.fc1 = nn.Linear(57344, 200)
         self.bn1 = nn.BatchNorm1d(200)
         self.fc2 = nn.Linear(200, 2)
         self.bn2 = nn.BatchNorm1d(2)
 
     def forward(self, x):
-        x1 = self.fc10(x)
-        x2 = self.fc11(x)
-        x1 = F.tanh(x1)
-        x = torch.cat((x1, x2), 1)
-        x = self.bn1(x)
-        
+        x = self.bn1(F.relu(self.fc1(x)))
         x = self.bn2(F.relu(self.fc2(x)))
 
         return x

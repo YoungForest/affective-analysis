@@ -52,13 +52,19 @@ class AudioAndVideoNet(nn.Module):
 
     def __init__(self, audio_dim, video_dim):
         super(AudioAndVideoNet, self).__init__()
+        self.bn1 = nn.BatchNorm1d(88384)
         self.fc1 = nn.Linear(audio_dim + video_dim, 1000)
+        self.bn2 = nn.BatchNorm1d(1000)
         self.fc2 = nn.Linear(1000, 100)
+        self.bn3 = nn.BatchNorm1d(100)
         self.fc3 = nn.Linear(100, 2)
 
     def forward(self, x):
+        x = self.bn1(x)
         x = F.relu(self.fc1(x))
+        x = self.bn2(x)
         x = F.relu(self.fc2(x))
+        x = self.bn3(x)
         x = F.relu(self.fc3(x))
 
         return x
@@ -68,7 +74,7 @@ def main(audio_model_path):
 
     global audio_net
     audio_net = AudioNet()
-    net = AudioAndVideoNet(32 * 15 * 97, 57344)
+    net = AudioAndVideoNet(32 * 10 * 97, 57344)
 
     if torch.cuda.device_count() > 1:
         print("Let's use", torch.cuda.device_count(), "GPUs!")
@@ -126,4 +132,4 @@ def main(audio_model_path):
 
 
 if __name__ == '__main__':
-    main('nn-audio-only-short-epoch-0.pth')
+    main('nn-audio-only-short-epoch-71.pth')

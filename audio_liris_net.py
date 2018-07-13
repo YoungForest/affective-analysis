@@ -102,7 +102,7 @@ def main():
 
 
     # train the network
-    for epoch in range(10): # Loop over the dataset multiple times
+    for epoch in range(100): # Loop over the dataset multiple times
 
         running_loss = 0.0
         for i, data in enumerate(trainloader, 0):
