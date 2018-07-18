@@ -39,10 +39,11 @@ def evaluate(net, testloader):
         # get the inputs
         inputs = data['input']
         valence = data['labels'][:, 0:1]
-        inputs, valence = inputs.to(device), valence.to(device)
+        arousal = data['labels'][:, 1:2]
+        inputs, valence, arousal = inputs.to(device), valence.to(device), arousal.to(device)
 
         outputs = net(inputs)
-        loss = criterion(outputs, valence)
+        loss = criterion(outputs, arousal)
         loss_test += loss.item()
 
     print('mse average: %f' % (loss_test / len(testloader)))
@@ -80,7 +81,7 @@ if __name__ == '__main__':
             
             # forward + backward + optimize
             outputs = net(inputs)
-            loss = criterion(outputs, valence)
+            loss = criterion(outputs, arousal)
             loss.backward()
             optimizer.step()
 
