@@ -127,7 +127,7 @@ def getLirisDataset(path, train=True, validate=False):
     return dataset
 
 def getDataLoader():
-    batch_size = 32
+    batch_size = 128
     # Load dataset
     trainset = getLirisDataset('/home/data_common/data_yangsen/pkl/liris-accede-train-dataset-mfcc-resnext101.pkl', train=True)
     validateset = getLirisDataset('/home/data_common/data_yangsen/pkl/liris-accede-validate-dataset-mfcc-resnext101.pkl', train=True, validate=True)

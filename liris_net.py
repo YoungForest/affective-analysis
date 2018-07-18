@@ -23,8 +23,8 @@ class LirisNet(nn.Module):
         super(LirisNet, self).__init__()
         self.fc1 = nn.Linear(57344, 200)
         self.bn1 = nn.BatchNorm1d(200)
-        self.fc2 = nn.Linear(200, 2)
-        self.bn2 = nn.BatchNorm1d(2)
+        self.fc2 = nn.Linear(200, 1)
+        self.bn2 = nn.BatchNorm1d(1)
 
     def forward(self, x):
         x = self.bn1(F.relu(self.fc1(x)))
@@ -35,25 +35,15 @@ class LirisNet(nn.Module):
 def evaluate(net, testloader):
     criterion = nn.MSELoss()
     loss_test = 0.0
-    loss_emotion = [0.0] * 2
     for i, data in enumerate(testloader, 0):
         # get the inputs
         inputs = data['input']
-        labels = data['labels']
-        inputs, labels = inputs.to(device), labels.to(device)
+        valence = data['labels'][:, 0:1]
+        inputs, valence = inputs.to(device), valence.to(device)
 
         outputs = net(inputs)
-        loss = criterion(outputs, labels)
+        loss = criterion(outputs, valence)
         loss_test += loss.item()
-
-        for i in range(2):
-            loss = criterion(outputs[:, i], labels[:, i])
-            loss_emotion[i] += loss.item()
-
-    print('test result: ')
-    for i in range(2):
-        print('%s mse: %f' % (emotions[i], loss_emotion[i] / len(testloader)))
-        loss_emotion_epoch[i].append(loss_emotion[i] / len(testloader))
 
     print('mse average: %f' % (loss_test / len(testloader)))
     mse_list.append(loss_test / len(testloader))
@@ -81,15 +71,16 @@ if __name__ == '__main__':
         for i, data in enumerate(trainloader, 0):
             # get the inputs
             inputs = data['input']
-            labels = data['labels']
-            inputs, labels = inputs.to(device), labels.to(device)
+            valence = data['labels'][:, 0:1]
+            arousal = data['labels'][:, 1:2]
+            inputs, valence, arousal = inputs.to(device), valence.to(device), arousal.to(device)
 
             # zero the parameter gradients
             optimizer.zero_grad()
             
             # forward + backward + optimize
             outputs = net(inputs)
-            loss = criterion(outputs, labels)
+            loss = criterion(outputs, valence)
             loss.backward()
             optimizer.step()
 
@@ -106,4 +97,3 @@ if __name__ == '__main__':
         evaluate(net, testloader)
 
     print(mse_list)
-    print(loss_emotion_epoch)
