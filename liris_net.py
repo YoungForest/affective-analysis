@@ -58,7 +58,7 @@ if __name__ == '__main__':
         print("Let's use", torch.cuda.device_count(), "GPUs!")
         net = nn.DataParallel(net)
     net.to(device)
-    # net.load_state_dict(torch.load('nn-2.pth'))
+    net.load_state_dict(torch.load('/home/data_common/data_yangsen/pth/nn-video-only-epoch-499.pth'))
  
     # define a Loss function and optimizer
     criterion = nn.MSELoss()
@@ -66,7 +66,8 @@ if __name__ == '__main__':
     # print(net.parameters())
 
     # train the network
-    for epoch in range(50): # Loop over the dataset multiple times
+    epoch_num = 500
+    for epoch in range(epoch_num): # Loop over the dataset multiple times
 
         running_loss = 0.0
         for i, data in enumerate(trainloader, 0):
@@ -87,11 +88,11 @@ if __name__ == '__main__':
 
             # print statistics
             running_loss += loss.item()
-            if i % 5 == 4:
-                print('[%d. %5d] loss: %.3f' % (epoch + 1, i + 1, running_loss / 5))
+            if i % epoch_num == epoch_num - 1:
+                print('[%d. %5d] loss: %.3f' % (epoch + 1, i + 1, running_loss / epoch_num))
                 running_loss = 0.0
         # Serialization semantics, save the trained model
-        torch.save(net.state_dict(), 'nn-video-only-epoch-%d.pth' %(epoch))
+        torch.save(net.state_dict(), '/home/data_common/data_yangsen/pth/nn-video-only-epoch-%d.pth' %(epoch + 500))
 
 
         print('Finished Training')
