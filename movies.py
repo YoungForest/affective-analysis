@@ -1,6 +1,7 @@
 from xml.dom.minidom import parse
 import xml.dom.minidom
 import os
+from functools import reduce
 
 class Movie(object):
     threshold = 100 # 多长的间隔认为连续
@@ -29,6 +30,9 @@ class Movie(object):
 
     def __repr__(self):
         return str([len(x) for x in self.continuous_group])
+
+    def get_continuous_gourp(self, thres):
+        return list(filter(lambda x: len(x) >= thres, self.continuous_group))
 
 movie_xml = 'A:/work/su/LIRIS-ACCEDE/LIRIS-ACCEDE-data/ACCEDEmovies.xml'
 print(movie_xml)
@@ -70,3 +74,17 @@ for media in medias:
 
 print ('--------------------------')
 print (movie_map)
+print ('----')
+print (len(movie_map))
+
+def get_filter(threshold):
+    def movie_continuious_length_filter(pair):
+        name, movie = pair
+        if max([len(x) for x in movie.continuous_group]) >= threshold:
+            return True
+        return False
+    return movie_continuious_length_filter
+
+for i in range(40):
+    long_clips = dict(filter(get_filter(i), movie_map.items()))
+    print (f'| {i} | {len(long_clips)} | {reduce(lambda x, y: x + y, list(map(lambda x: len(x[1].get_continuous_gourp(i)), long_clips.items())), 0)} |')
