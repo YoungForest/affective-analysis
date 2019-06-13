@@ -14,12 +14,13 @@ class LirisDataset(Dataset):
     """Load liris database from json output by video-action classification
     """
     
-    def __init__(self, json_file, root_dir, audio_root_dir, ranking_file, sets_file, train=True, validate=False, sep=',', transform=None):
+    def __init__(self, json_file, root_dir, audio_root_dir, ranking_file, sets_file, batch_size=1, train=True, validate=False, sep=',', transform=None):
         """
         Args:
             json_file (string): Path to the json file outputed from pre-trained model.
             root_dir (string): Directory with all the videos.
             ranking_file (string): Path to the csv file with annotations.
+            batch_size (int): How many clips does a item contain? default: 1
             transfrom (bool): Whether or not to uniform data.
         """
         data = None
