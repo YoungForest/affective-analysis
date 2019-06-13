@@ -2,9 +2,24 @@ from xml.dom.minidom import parse
 import xml.dom.minidom
 import os
 from functools import reduce
+import platform
+
+path_prefix = None
+
+if platform.system() == 'Linux':
+    path_prefix = '/data'
+else:
+    path_prefix = 'A:/work/su/'
+
+movie_xml = os.path.join(
+    path_prefix, 'LIRIS-ACCEDE/LIRIS-ACCEDE-data/ACCEDEmovies.xml')
+description_xml = os.path.join(
+    path_prefix, 'LIRIS-ACCEDE/LIRIS-ACCEDE-data/ACCEDEdescription.xml')
+
 
 class Movie(object):
-    threshold = 100 # 多长的间隔认为连续
+    threshold = 100  # 多长的间隔认为连续
+
     def __init__(self, name, excerpts):
         self.name = name
         self.excerpts = excerpts
@@ -34,7 +49,7 @@ class Movie(object):
     def get_continuous_gourp(self, thres):
         return list(filter(lambda x: len(x) >= thres, self.continuous_group))
 
-movie_xml = 'A:/work/su/LIRIS-ACCEDE/LIRIS-ACCEDE-data/ACCEDEmovies.xml'
+
 print(movie_xml)
 DOMTree = xml.dom.minidom.parse(movie_xml)
 content = DOMTree.documentElement
@@ -46,10 +61,10 @@ for movie in movies:
     excerpts = movie.getElementsByTagName('excerpts')[0].childNodes[0].data
     movie_map[name] = Movie(name, excerpts)
 
-description_xml = 'A:/work/su/LIRIS-ACCEDE/LIRIS-ACCEDE-data/ACCEDEdescription.xml'
 description_dom_tree = xml.dom.minidom.parse(description_xml)
 description_content = description_dom_tree.documentElement
 medias = description_content.getElementsByTagName('media')
+
 
 class Clip(object):
     def __init__(self, name, movie, start, end):
@@ -64,18 +79,20 @@ class Clip(object):
     def __repr__(self):
         return self.__str__()
 
+
 for media in medias:
     name = media.getElementsByTagName('name')[0].childNodes[0].data
     movie = media.getElementsByTagName('movie')[0].childNodes[0].data
     start = media.getElementsByTagName('start')[0].childNodes[0].data
     end = media.getElementsByTagName('end')[0].childNodes[0].data
-    
+
     movie_map[movie].add_clip(Clip(name, movie, start, end))
 
-print ('--------------------------')
-print (movie_map)
-print ('----')
-print (len(movie_map))
+print('--------------------------')
+print(movie_map)
+print('----')
+print(len(movie_map))
+
 
 def get_filter(threshold):
     def movie_continuious_length_filter(pair):
@@ -85,6 +102,8 @@ def get_filter(threshold):
         return False
     return movie_continuious_length_filter
 
+
 for i in range(40):
     long_clips = dict(filter(get_filter(i), movie_map.items()))
-    print (f'| {i} | {len(long_clips)} | {reduce(lambda x, y: x + y, list(map(lambda x: len(x[1].get_continuous_gourp(i)), long_clips.items())), 0)} |')
+    print(
+        f'| {i} | {len(long_clips)} | {reduce(lambda x, y: x + y, list(map(lambda x: len(x[1].get_continuous_gourp(i)), long_clips.items())), 0)} |')
