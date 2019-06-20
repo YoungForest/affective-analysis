@@ -40,3 +40,6 @@ V100 地址 ssh zy1806711@10.134.166.8
 | 25 | 1 | 1 |
 | 26 | 1 | 1 |
 | 27 | 0 | 0 |
+
+## 特征提取
+python main.py --input /data/affective-analysis/input --video_root /data/LIRIS-ACCEDE/LIRIS-ACCEDE-data/data --output ./output.json --model /data/PretrainedModels/resnet-34-kinetics.pth --mode feature
