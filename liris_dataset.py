@@ -135,8 +135,8 @@ def getLirisDataset(path, train=True, validate=False):
         with open(path, 'rb') as my_file:
             dataset = pickle.load(my_file)
     else:
-        dataset = LirisDataset(json_file='output-resnext-101-kinetics.json', root_dir='/home/data_common/data_yangsen/data', audio_root_dir='/home/data_common/data_yangsen/audio',
-                               train=train, validate=validate, transform=True, ranking_file='ACCEDEranking.txt', sets_file='ACCEDEsets.txt', sep='\t')
+        dataset = LirisDataset(json_file='output-liris-resnet-34-kinetics.json', root_dir=movies.data_path,
+                               transform=True, ranking_file=movies.ranking_file, sets_file=movies.sets_file, sep='\t')
         with open(path, 'wb') as out:
             pickle.dump(dataset, out, pickle.HIGHEST_PROTOCOL)
     assert dataset

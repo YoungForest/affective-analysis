@@ -17,6 +17,7 @@ emotions = ['valence', 'arousal']
 # record mse of two emotions every epoch
 loss_emotion_epoch = [[], []]
 
+
 class LirisNet(nn.Module):
 
     def __init__(self):
@@ -32,6 +33,7 @@ class LirisNet(nn.Module):
 
         return x
 
+
 def evaluate(net, testloader):
     criterion = nn.MSELoss()
     loss_test = 0.0
@@ -40,7 +42,8 @@ def evaluate(net, testloader):
         inputs = data['input']
         valence = data['labels'][:, 0:1]
         arousal = data['labels'][:, 1:2]
-        inputs, valence, arousal = inputs.to(device), valence.to(device), arousal.to(device)
+        inputs, valence, arousal = inputs.to(
+            device), valence.to(device), arousal.to(device)
 
         outputs = net(inputs)
         loss = criterion(outputs, arousal)
@@ -48,6 +51,7 @@ def evaluate(net, testloader):
 
     print('mse average: %f' % (loss_test / len(testloader)))
     mse_list.append(loss_test / len(testloader))
+
 
 if __name__ == '__main__':
     trainloader, testloader = getDataLoader()
@@ -58,8 +62,9 @@ if __name__ == '__main__':
         print("Let's use", torch.cuda.device_count(), "GPUs!")
         net = nn.DataParallel(net)
     net.to(device)
-    net.load_state_dict(torch.load('/home/data_common/data_yangsen/pth/nn-video-only-epoch-499.pth'))
- 
+    net.load_state_dict(torch.load(
+        '/home/data_common/data_yangsen/pth/nn-video-only-epoch-499.pth'))
+
     # define a Loss function and optimizer
     criterion = nn.MSELoss()
     optimizer = optim.SGD(net.parameters(), lr=0.0001)
@@ -67,7 +72,7 @@ if __name__ == '__main__':
 
     # train the network
     epoch_num = 500
-    for epoch in range(epoch_num): # Loop over the dataset multiple times
+    for epoch in range(epoch_num):  # Loop over the dataset multiple times
 
         running_loss = 0.0
         for i, data in enumerate(trainloader, 0):
@@ -75,11 +80,12 @@ if __name__ == '__main__':
             inputs = data['input']
             valence = data['labels'][:, 0:1]
             arousal = data['labels'][:, 1:2]
-            inputs, valence, arousal = inputs.to(device), valence.to(device), arousal.to(device)
+            inputs, valence, arousal = inputs.to(
+                device), valence.to(device), arousal.to(device)
 
             # zero the parameter gradients
             optimizer.zero_grad()
-            
+
             # forward + backward + optimize
             outputs = net(inputs)
             loss = criterion(outputs, arousal)
@@ -89,11 +95,12 @@ if __name__ == '__main__':
             # print statistics
             running_loss += loss.item()
             if i % epoch_num == epoch_num - 1:
-                print('[%d. %5d] loss: %.3f' % (epoch + 1, i + 1, running_loss / epoch_num))
+                print('[%d. %5d] loss: %.3f' %
+                      (epoch + 1, i + 1, running_loss / epoch_num))
                 running_loss = 0.0
         # Serialization semantics, save the trained model
-        torch.save(net.state_dict(), '/home/data_common/data_yangsen/pth/nn-video-only-epoch-%d.pth' %(epoch + 500))
-
+        torch.save(net.state_dict(
+        ), '/home/data_common/data_yangsen/pth/nn-video-only-epoch-%d.pth' % (epoch + 500))
 
         print('Finished Training')
         evaluate(net, testloader)
