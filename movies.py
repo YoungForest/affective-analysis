@@ -4,6 +4,9 @@ import os
 from functools import reduce
 import platform
 
+
+# independent with platform
+# usually, I work on two platform. The PC or V100 server. The former is more convinient while the latter is more powerful.
 path_prefix = None
 
 if platform.system() == 'Linux':
@@ -15,10 +18,15 @@ movie_xml = os.path.join(
     path_prefix, 'LIRIS-ACCEDE/LIRIS-ACCEDE-data/ACCEDEmovies.xml')
 description_xml = os.path.join(
     path_prefix, 'LIRIS-ACCEDE/LIRIS-ACCEDE-data/ACCEDEdescription.xml')
+data_path = os.path.join(path_prefix, 'LIRIS-ACCEDE/LIRIS-ACCEDE-data/data')
+ranking_file = os.path.join(
+    path_prefix, 'LIRIS-ACCEDE/LIRIS-ACCEDE-annotations/annotations/ACCEDEranking.txt')
+sets_file = os.path.join(
+    path_prefix, 'LIRIS-ACCEDE/LIRIS-ACCEDE-annotations/annotations/ACCEDEsets.txt')
 
 
 class Movie(object):
-    threshold = 100  # 多长的间隔认为连续
+    threshold = 1  # 多长的间隔认为连续
 
     def __init__(self, name, excerpts):
         self.name = name
@@ -96,7 +104,7 @@ print(len(movie_map))
 
 def get_filter(threshold):
     def movie_continuious_length_filter(pair):
-        name, movie = pair
+        _, movie = pair
         if max([len(x) for x in movie.continuous_group]) >= threshold:
             return True
         return False
