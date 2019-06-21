@@ -7,6 +7,7 @@ from liris_dataset import LirisDataset
 from liris_dataset import getDataLoader
 import liris_dataset
 from torch.utils.data.sampler import SubsetRandomSampler
+import movies
 
 # Training on GPU
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -22,7 +23,7 @@ class LirisNet(nn.Module):
 
     def __init__(self):
         super(LirisNet, self).__init__()
-        self.fc1 = nn.Linear(57344, 200)
+        self.fc1 = nn.Linear(14336, 200)
         self.bn1 = nn.BatchNorm1d(200)
         self.fc2 = nn.Linear(200, 1)
         self.bn2 = nn.BatchNorm1d(1)
@@ -54,7 +55,11 @@ def evaluate(net, testloader):
 
 
 if __name__ == '__main__':
-    trainloader, testloader = getDataLoader()
+    train_dataset = LirisDataset(json_file='output-liris-resnet-34-kinetics.json', root_dir=movies.data_path,
+                                 transform=True, window_size=3, ranking_file=movies.ranking_file, sets_file=movies.sets_file, sep='\t')
+
+    trainloader = torch.utils.data.DataLoader(
+        train_dataset, batch_size=32, shuffle=False)
 
     # new a Neural Network instance
     net = LirisNet()
@@ -62,8 +67,8 @@ if __name__ == '__main__':
         print("Let's use", torch.cuda.device_count(), "GPUs!")
         net = nn.DataParallel(net)
     net.to(device)
-    net.load_state_dict(torch.load(
-        '/home/data_common/data_yangsen/pth/nn-video-only-epoch-499.pth'))
+    # net.load_state_dict(torch.load(
+    #     '/home/data_common/data_yangsen/pth/nn-video-only-epoch-499.pth'))
 
     # define a Loss function and optimizer
     criterion = nn.MSELoss()
@@ -100,9 +105,9 @@ if __name__ == '__main__':
                 running_loss = 0.0
         # Serialization semantics, save the trained model
         torch.save(net.state_dict(
-        ), '/home/data_common/data_yangsen/pth/nn-video-only-epoch-%d.pth' % (epoch + 500))
+        ), '/data/pth/nn-video-only-epoch-%d.pth' % (epoch + 500))
 
         print('Finished Training')
-        evaluate(net, testloader)
+        # evaluate(net, testloader)
 
     print(mse_list)

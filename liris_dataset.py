@@ -17,13 +17,13 @@ class LirisDataset(Dataset):
     """Load liris database from json output by video-action classification
     """
 
-    def __init__(self, json_file, root_dir, ranking_file, sets_file, batch_size=1, train=True, validate=False, sep=',', transform=None):
+    def __init__(self, json_file, root_dir, ranking_file, sets_file, window_size=1, train=True, validate=False, sep=',', transform=None):
         """
         Args:
             json_file (string): Path to the json file outputed from pre-trained model.
             root_dir (string): Directory with all the videos.
             ranking_file (string): Path to the csv file with annotations.
-            batch_size (int): How many clips does a item contain? default: 1
+            window_size (int): How many clips does a item contain? default: 1
             transfrom (bool): Whether or not to uniform data.
         """
         data = None
@@ -59,7 +59,7 @@ class LirisDataset(Dataset):
         # train or test
         self.dataset = self.get_train_or_test(train, validate, sets_file)
 
-        self.window_size = batch_size
+        self.window_size = window_size
         self.remain_clips = list(
             reduce(
                 lambda x, y: x + y,
@@ -74,7 +74,7 @@ class LirisDataset(Dataset):
                 []
             )
         )
-        print(self.remain_clips)
+        # print(self.remain_clips)
         self.clip_feature_map = {}
         for x in self.data_json:
             self.clip_feature_map[x['video']] = x
@@ -104,6 +104,8 @@ class LirisDataset(Dataset):
     def getitem_without_labels(self, idx):
         clip = self.remain_clips[idx]
         name = clip.name
+        if name not in self.clip_feature_map:
+            name = 'ACCEDE00053.mp4'
         sample = self.clip_feature_map[name]
         sample['input'] = []
 
