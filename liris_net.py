@@ -8,6 +8,7 @@ from liris_dataset import getDataLoader
 import liris_dataset
 from torch.utils.data.sampler import SubsetRandomSampler
 import movies
+from tensorboardX import SummaryWriter
 
 # Training on GPU
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -23,16 +24,29 @@ class LirisNet(nn.Module):
 
     def __init__(self):
         super(LirisNet, self).__init__()
-        self.fc1 = nn.Linear(14336, 200)
-        self.bn1 = nn.BatchNorm1d(200)
-        self.fc2 = nn.Linear(200, 1)
-        self.bn2 = nn.BatchNorm1d(1)
+        self.input_dim = 14336
+        self.hidden_dim = 64
+        self.num_directions = 2
+        self.num_layers = 2
+        self.batch_size = 32
+        self.lstm = nn.LSTM(input_size=self.input_dim, hidden_size=self.hidden_dim,
+                            num_layers=self.num_layers, bidirectional=(self.num_directions == 2))
+        self.linear = nn.Linear(
+            self.num_directions*self.hidden_dim*self.batch_size, 2 * self.batch_size)
+        h0 = torch.randn(self.num_layers*self.num_directions,
+                         self.batch_size, self.hidden_dim, device=device)
+        c0 = torch.randn(self.num_layers*self.num_directions,
+                         self.batch_size, self.hidden_dim, device=device)
+        self.hidden = (h0, c0)
 
     def forward(self, x):
-        x = self.bn1(F.relu(self.fc1(x)))
-        x = self.bn2(F.relu(self.fc2(x)))
+        a, b = x.shape
+        x = x.view(1, a, b)
+        # lstm input: (seq_len, batch, input_size), (1, 16, 14336)
+        lstm_out, self.hidden = self.lstm(x, self.hidden)
+        y_pred = self.linear(lstm_out[-1].reshape(1, -1).squeeze())
 
-        return x
+        return y_pred.reshape(self.batch_size, 2)
 
 
 def evaluate(net, testloader):
@@ -57,7 +71,7 @@ def evaluate(net, testloader):
 if __name__ == '__main__':
     train_dataset = LirisDataset(json_file='output-liris-resnet-34-kinetics.json', root_dir=movies.data_path,
                                  transform=True, window_size=3, ranking_file=movies.ranking_file, sets_file=movies.sets_file, sep='\t')
-
+    writer = SummaryWriter('log/')
     trainloader = torch.utils.data.DataLoader(
         train_dataset, batch_size=32, shuffle=False)
 
@@ -76,10 +90,9 @@ if __name__ == '__main__':
     # print(net.parameters())
 
     # train the network
-    epoch_num = 500
+    epoch_num = 50
+    count = 0
     for epoch in range(epoch_num):  # Loop over the dataset multiple times
-
-        running_loss = 0.0
         for i, data in enumerate(trainloader, 0):
             # get the inputs
             inputs = data['input']
@@ -87,22 +100,22 @@ if __name__ == '__main__':
             arousal = data['labels'][:, 1:2]
             inputs, valence, arousal = inputs.to(
                 device), valence.to(device), arousal.to(device)
-
+            if inputs.shape[0] != 32:
+                print(f'bad shape: {inputs.shape}')
+                continue
             # zero the parameter gradients
             optimizer.zero_grad()
 
             # forward + backward + optimize
             outputs = net(inputs)
             loss = criterion(outputs, arousal)
-            loss.backward()
+            loss.backward(retain_graph=True)
             optimizer.step()
 
             # print statistics
-            running_loss += loss.item()
-            if i % epoch_num == epoch_num - 1:
-                print('[%d. %5d] loss: %.3f' %
-                      (epoch + 1, i + 1, running_loss / epoch_num))
-                running_loss = 0.0
+            writer.add_scalar('train_6_21', loss.item(), count)
+            count += 1
+            print(f'Epoch: {epoch}, index: {i}, count: {count}: {loss.item()}')
         # Serialization semantics, save the trained model
         torch.save(net.state_dict(
         ), '/data/pth/nn-video-only-epoch-%d.pth' % (epoch + 500))

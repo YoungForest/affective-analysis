@@ -44,6 +44,7 @@ V100 地址 ssh zy1806711@10.134.166.8
 | 27 | 0 | 0 |
 
 作为对比，严格的连续片段。
+
 | 过滤连续clip的数量阈值(>=) | 符合要求的电影数目 | 连续片段组成的长片段的数量(把这个片段当成新的电影) |
 | -- | -- | -- |
 | 0 | 160 | 4300 |
@@ -88,4 +89,19 @@ V100 地址 ssh zy1806711@10.134.166.8
 | 39 | 0 | 0 |
 
 ## 特征提取
+```
 python main.py --input /data/affective-analysis/input --video_root /data/LIRIS-ACCEDE/LIRIS-ACCEDE-data/data --output ./output.json --model /data/PretrainedModels/resnet-34-kinetics.pth --mode feature
+```
+
+## 训练过程
+```
+CUDA_VISIBLE_DEVICES=0 python liris_net.py
+```
+使用2块GPU会有如下错误：
+> RuntimeError: Input and hidden tensors are not at the same device, found input tensor at cuda:1 and hidden tensor at cuda:0
+
+## tensorboard
+
+```
+tensorboard --logdir log --port 6006
+```
