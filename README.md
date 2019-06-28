@@ -100,6 +100,10 @@ CUDA_VISIBLE_DEVICES=0 python liris_net.py
 使用2块GPU会有如下错误：
 > RuntimeError: Input and hidden tensors are not at the same device, found input tensor at cuda:1 and hidden tensor at cuda:0
 
+训练集 : 测试集 = 3 : 1
+
+4个小时50轮。
+
 ## tensorboard
 
 ```

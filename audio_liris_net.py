@@ -89,11 +89,8 @@ class AudioNet(nn.Module):
 def main():
     trainloader, testloader = getDataLoader()
 
-    net = AudioNet()
-    if torch.cuda.device_count() > 1:
-        print("Let's use", torch.cuda.device_count(), "GPUs!")
-        net = nn.DataParallel(net)
-    net.to(device)
+    net = AudioNet().cuda()
+    net = nn.DataParallel(net)
     # net.load_state_dict(torch.load('nn-epoch-49.pth'))
  
     # define a Loss function and optimizer

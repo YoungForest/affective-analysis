@@ -104,8 +104,6 @@ class LirisDataset(Dataset):
     def getitem_without_labels(self, idx):
         clip = self.remain_clips[idx]
         name = clip.name
-        if name not in self.clip_feature_map:
-            name = 'ACCEDE00053.mp4'
         sample = self.clip_feature_map[name]
         sample['input'] = []
 

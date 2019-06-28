@@ -13,6 +13,8 @@ from tensorboardX import SummaryWriter
 # Training on GPU
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 print(device)
+date = '6_28'
+writer = SummaryWriter('log/')
 
 mse_list = []
 emotions = ['valence', 'arousal']
@@ -48,7 +50,7 @@ class LirisNet(nn.Module):
 
         return y_pred.reshape(self.batch_size, 2)
 
-
+evaluate_count = 50
 def evaluate(net, testloader):
     criterion = nn.MSELoss()
     loss_test = 0.0
@@ -65,24 +67,28 @@ def evaluate(net, testloader):
         loss_test += loss.item()
 
     print('mse average: %f' % (loss_test / len(testloader)))
+    global evaluate_count
+    writer.add_scalar(f'test_average_{date}', loss_test / len(testloader), evaluate_count)
+    evaluate_count += 1
     mse_list.append(loss_test / len(testloader))
 
 
 if __name__ == '__main__':
     train_dataset = LirisDataset(json_file='output-liris-resnet-34-kinetics.json', root_dir=movies.data_path,
                                  transform=True, window_size=3, ranking_file=movies.ranking_file, sets_file=movies.sets_file, sep='\t')
-    writer = SummaryWriter('log/')
+    split_point = int(len(train_dataset) * 3 / 4)
     trainloader = torch.utils.data.DataLoader(
-        train_dataset, batch_size=32, shuffle=False)
+        torch.utils.data.Subset(train_dataset, range(0, split_point)), batch_size=32, shuffle=False)
+    testloader = torch.utils.data.DataLoader(
+        torch.utils.data.Subset(train_dataset, range(split_point, len(train_dataset))), batch_size=32, shuffle=False)
 
     # new a Neural Network instance
-    net = LirisNet()
+    net = LirisNet().cuda()
     if torch.cuda.device_count() > 1:
         print("Let's use", torch.cuda.device_count(), "GPUs!")
         net = nn.DataParallel(net)
-    net.to(device)
-    # net.load_state_dict(torch.load(
-    #     '/home/data_common/data_yangsen/pth/nn-video-only-epoch-499.pth'))
+    net.load_state_dict(torch.load(
+        '/data/pth/nn-6_28-epoch-49.pth'))
 
     # define a Loss function and optimizer
     criterion = nn.MSELoss()
@@ -113,14 +119,14 @@ if __name__ == '__main__':
             optimizer.step()
 
             # print statistics
-            writer.add_scalar('train_6_21', loss.item(), count)
+            writer.add_scalar(f'train_{date}', loss.item(), count)
             count += 1
-            print(f'Epoch: {epoch}, index: {i}, count: {count}: {loss.item()}')
+            print(f'Epoch: {evaluate_count}, index: {i}, count: {count}: {loss.item()}')
         # Serialization semantics, save the trained model
         torch.save(net.state_dict(
-        ), '/data/pth/nn-video-only-epoch-%d.pth' % (epoch + 500))
+        ), f'/data/pth/nn-{date}-epoch-{evaluate_count}.pth')
 
         print('Finished Training')
-        # evaluate(net, testloader)
+        evaluate(net, testloader)
 
     print(mse_list)
