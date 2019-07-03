@@ -109,3 +109,16 @@ CUDA_VISIBLE_DEVICES=0 python liris_net.py
 ```
 tensorboard --logdir log --port 6006
 ```
+
+### tensorboard 标签解释
+
+test_average_6_28: 最开始的测试结果。因为训练了50轮仍然没有收敛，所以我又load了最后一轮的参数，多训练50轮。但是发现load后会有一个小断层，往上跳了一下。
+test_average_6_29: 一次训练150轮。因为retain_graph，所以训练到66轮的时候会显存爆掉。
+test_average_7_2: 取消掉retain_graph，同时batch调小到16.
+test_average_7_3: batch调大到128。
+
+
+## 网络结构
+
+特征维数：
+14336

@@ -10,10 +10,12 @@ from torch.utils.data.sampler import SubsetRandomSampler
 import movies
 from tensorboardX import SummaryWriter
 
+batch_size = 128
+
 # Training on GPU
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 print(device)
-date = '6_28'
+date = '7_3'
 writer = SummaryWriter('log/')
 
 mse_list = []
@@ -30,27 +32,22 @@ class LirisNet(nn.Module):
         self.hidden_dim = 64
         self.num_directions = 2
         self.num_layers = 2
-        self.batch_size = 32
+        self.batch_size = batch_size
         self.lstm = nn.LSTM(input_size=self.input_dim, hidden_size=self.hidden_dim,
                             num_layers=self.num_layers, bidirectional=(self.num_directions == 2))
         self.linear = nn.Linear(
             self.num_directions*self.hidden_dim*self.batch_size, 2 * self.batch_size)
-        h0 = torch.randn(self.num_layers*self.num_directions,
-                         self.batch_size, self.hidden_dim, device=device)
-        c0 = torch.randn(self.num_layers*self.num_directions,
-                         self.batch_size, self.hidden_dim, device=device)
-        self.hidden = (h0, c0)
 
     def forward(self, x):
         a, b = x.shape
         x = x.view(1, a, b)
         # lstm input: (seq_len, batch, input_size), (1, 16, 14336)
-        lstm_out, self.hidden = self.lstm(x, self.hidden)
+        lstm_out, _ = self.lstm(x)
         y_pred = self.linear(lstm_out[-1].reshape(1, -1).squeeze())
 
         return y_pred.reshape(self.batch_size, 2)
 
-evaluate_count = 50
+evaluate_count = 0
 def evaluate(net, testloader):
     criterion = nn.MSELoss()
     loss_test = 0.0
@@ -61,7 +58,9 @@ def evaluate(net, testloader):
         arousal = data['labels'][:, 1:2]
         inputs, valence, arousal = inputs.to(
             device), valence.to(device), arousal.to(device)
-
+        if inputs.shape[0] != batch_size:
+            print(f'bad shape when test: {inputs.shape}')
+            continue
         outputs = net(inputs)
         loss = criterion(outputs, arousal)
         loss_test += loss.item()
@@ -78,17 +77,17 @@ if __name__ == '__main__':
                                  transform=True, window_size=3, ranking_file=movies.ranking_file, sets_file=movies.sets_file, sep='\t')
     split_point = int(len(train_dataset) * 3 / 4)
     trainloader = torch.utils.data.DataLoader(
-        torch.utils.data.Subset(train_dataset, range(0, split_point)), batch_size=32, shuffle=False)
+        torch.utils.data.Subset(train_dataset, range(0, split_point)), batch_size=batch_size, shuffle=False)
     testloader = torch.utils.data.DataLoader(
-        torch.utils.data.Subset(train_dataset, range(split_point, len(train_dataset))), batch_size=32, shuffle=False)
+        torch.utils.data.Subset(train_dataset, range(split_point, len(train_dataset))), batch_size=batch_size, shuffle=False)
 
     # new a Neural Network instance
     net = LirisNet().cuda()
     if torch.cuda.device_count() > 1:
         print("Let's use", torch.cuda.device_count(), "GPUs!")
         net = nn.DataParallel(net)
-    net.load_state_dict(torch.load(
-        '/data/pth/nn-6_28-epoch-49.pth'))
+    # net.load_state_dict(torch.load(
+    #     '/data/pth/nn-6_28-epoch-49.pth'))
 
     # define a Loss function and optimizer
     criterion = nn.MSELoss()
@@ -96,7 +95,7 @@ if __name__ == '__main__':
     # print(net.parameters())
 
     # train the network
-    epoch_num = 50
+    epoch_num = 150
     count = 0
     for epoch in range(epoch_num):  # Loop over the dataset multiple times
         for i, data in enumerate(trainloader, 0):
@@ -106,7 +105,7 @@ if __name__ == '__main__':
             arousal = data['labels'][:, 1:2]
             inputs, valence, arousal = inputs.to(
                 device), valence.to(device), arousal.to(device)
-            if inputs.shape[0] != 32:
+            if inputs.shape[0] != batch_size:
                 print(f'bad shape: {inputs.shape}')
                 continue
             # zero the parameter gradients
@@ -115,7 +114,7 @@ if __name__ == '__main__':
             # forward + backward + optimize
             outputs = net(inputs)
             loss = criterion(outputs, arousal)
-            loss.backward(retain_graph=True)
+            loss.backward()
             optimizer.step()
 
             # print statistics
