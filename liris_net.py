@@ -10,7 +10,7 @@ from torch.utils.data.sampler import SubsetRandomSampler
 import movies
 from tensorboardX import SummaryWriter
 
-batch_size = 128
+batch_size = 16
 
 # Training on GPU
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -47,7 +47,10 @@ class LirisNet(nn.Module):
 
         return y_pred.reshape(self.batch_size, 2)
 
+
 evaluate_count = 0
+
+
 def evaluate(net, testloader):
     criterion = nn.MSELoss()
     loss_test = 0.0
@@ -67,7 +70,8 @@ def evaluate(net, testloader):
 
     print('mse average: %f' % (loss_test / len(testloader)))
     global evaluate_count
-    writer.add_scalar(f'test_average_{date}', loss_test / len(testloader), evaluate_count)
+    writer.add_scalar(f'test_average_{date}',
+                      loss_test / len(testloader), evaluate_count)
     evaluate_count += 1
     mse_list.append(loss_test / len(testloader))
 
@@ -120,7 +124,8 @@ if __name__ == '__main__':
             # print statistics
             writer.add_scalar(f'train_{date}', loss.item(), count)
             count += 1
-            print(f'Epoch: {evaluate_count}, index: {i}, count: {count}: {loss.item()}')
+            print(
+                f'Epoch: {evaluate_count}, index: {i}, count: {count}: {loss.item()}')
         # Serialization semantics, save the trained model
         torch.save(net.state_dict(
         ), f'/data/pth/nn-{date}-epoch-{evaluate_count}.pth')
