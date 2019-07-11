@@ -9,13 +9,14 @@ import liris_dataset
 from torch.utils.data.sampler import SubsetRandomSampler
 import movies
 from tensorboardX import SummaryWriter
+import pandas as pd
 
 batch_size = 16
 
 # Training on GPU
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 print(device)
-date = '7_3'
+date = '7_11'
 writer = SummaryWriter('log/')
 
 mse_list = []
@@ -54,6 +55,7 @@ evaluate_count = 0
 def evaluate(net, testloader):
     criterion = nn.MSELoss()
     loss_test = 0.0
+    result = []
     for i, data in enumerate(testloader, 0):
         # get the inputs
         inputs = data['input']
@@ -65,9 +67,19 @@ def evaluate(net, testloader):
             print(f'bad shape when test: {inputs.shape}')
             continue
         outputs = net(inputs)
+        # print(outputs)
+        # print(i)
+        # print(data)
+        for i, item in enumerate(data['video']):
+            row = [item, valence[i].item(), arousal[i].item(), outputs[i]
+                   [0].item(), outputs[i][1].item()]
+            result.append(row)
         loss = criterion(outputs, arousal)
         loss_test += loss.item()
 
+    predict_result = pd.DataFrame(data=result, columns=[
+                                  'name', 'ground_truth_valence', 'ground_truth_arousal', 'valence', 'arousal'])
+    predict_result.to_csv('predict.csv')
     print('mse average: %f' % (loss_test / len(testloader)))
     global evaluate_count
     writer.add_scalar(f'test_average_{date}',
@@ -78,8 +90,10 @@ def evaluate(net, testloader):
 
 if __name__ == '__main__':
     train_dataset = LirisDataset(json_file='output-liris-resnet-34-kinetics.json', root_dir=movies.data_path,
-                                 transform=True, window_size=3, ranking_file=movies.ranking_file, sets_file=movies.sets_file, sep='\t')
+                                 transform=True, window_size=1, ranking_file=movies.ranking_file, sets_file=movies.sets_file, sep='\t')
     split_point = int(len(train_dataset) * 3 / 4)
+    totalloader = torch.utils.data.DataLoader(
+        train_dataset, batch_size=batch_size, shuffle=False)
     trainloader = torch.utils.data.DataLoader(
         torch.utils.data.Subset(train_dataset, range(0, split_point)), batch_size=batch_size, shuffle=False)
     testloader = torch.utils.data.DataLoader(
@@ -91,9 +105,9 @@ if __name__ == '__main__':
         print("Let's use", torch.cuda.device_count(), "GPUs!")
         net = nn.DataParallel(net)
     # net.load_state_dict(torch.load(
-    #     '/data/pth/nn-6_28-epoch-49.pth'))
+    #     '/data/pth/nn-7_2-epoch-80.pth'))
 
-    # define a Loss function and optimizer
+    # # define a Loss function and optimizer
     criterion = nn.MSELoss()
     optimizer = optim.SGD(net.parameters(), lr=0.0001)
     # print(net.parameters())
@@ -107,8 +121,9 @@ if __name__ == '__main__':
             inputs = data['input']
             valence = data['labels'][:, 0:1]
             arousal = data['labels'][:, 1:2]
-            inputs, valence, arousal = inputs.to(
-                device), valence.to(device), arousal.to(device)
+            ground_truth = data['labels']
+            inputs, valence, arousal, ground_truth = inputs.to(
+                device), valence.to(device), arousal.to(device), ground_truth.to(device)
             if inputs.shape[0] != batch_size:
                 print(f'bad shape: {inputs.shape}')
                 continue
@@ -117,7 +132,7 @@ if __name__ == '__main__':
 
             # forward + backward + optimize
             outputs = net(inputs)
-            loss = criterion(outputs, arousal)
+            loss = criterion(outputs, ground_truth)
             loss.backward()
             optimizer.step()
 
