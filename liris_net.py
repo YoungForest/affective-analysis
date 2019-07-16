@@ -16,7 +16,7 @@ batch_size = 16
 # Training on GPU
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 print(device)
-date = '7_11'
+date = '7_16'
 writer = SummaryWriter('log/')
 
 mse_list = []
@@ -30,7 +30,7 @@ class LirisNet(nn.Module):
     def __init__(self):
         super(LirisNet, self).__init__()
         self.input_dim = 14336
-        self.hidden_dim = 64
+        self.hidden_dim = 2048
         self.num_directions = 2
         self.num_layers = 2
         self.batch_size = batch_size
@@ -54,15 +54,17 @@ evaluate_count = 0
 
 def evaluate(net, testloader):
     criterion = nn.MSELoss()
-    loss_test = 0.0
+    arousal_loss_test = 0.0
+    valence_loss_test = 0.0
     result = []
     for i, data in enumerate(testloader, 0):
         # get the inputs
         inputs = data['input']
         valence = data['labels'][:, 0:1]
         arousal = data['labels'][:, 1:2]
-        inputs, valence, arousal = inputs.to(
-            device), valence.to(device), arousal.to(device)
+        ground_truth = data['labels']
+        inputs, valence, arousal, ground_truth = inputs.to(
+            device), valence.to(device), arousal.to(device), ground_truth.to(device)
         if inputs.shape[0] != batch_size:
             print(f'bad shape when test: {inputs.shape}')
             continue
@@ -74,18 +76,24 @@ def evaluate(net, testloader):
             row = [item, valence[i].item(), arousal[i].item(), outputs[i]
                    [0].item(), outputs[i][1].item()]
             result.append(row)
-        loss = criterion(outputs, arousal)
-        loss_test += loss.item()
+        outputs *= 1
+        arousal_loss = criterion(outputs[:, 0:1], valence)
+        valence_loss = criterion(outputs[:, 1:2], arousal)
+        arousal_loss_test += arousal_loss.item()
+        valence_loss_test += valence_loss.item()
 
     predict_result = pd.DataFrame(data=result, columns=[
                                   'name', 'ground_truth_valence', 'ground_truth_arousal', 'valence', 'arousal'])
     predict_result.to_csv('predict.csv')
-    print('mse average: %f' % (loss_test / len(testloader)))
+    print('arousal mse average: %f' % (arousal_loss_test / len(testloader)))
+    print('valence mse average: %f' % (valence_loss_test / len(testloader)))
     global evaluate_count
-    writer.add_scalar(f'test_average_{date}',
-                      loss_test / len(testloader), evaluate_count)
+    writer.add_scalar(f'predict_arousal_test_average_{date}',
+                      arousal_loss_test / len(testloader), evaluate_count)
+    writer.add_scalar(f'predict_valence_test_average_{date}',
+                      valence_loss_test / len(testloader), evaluate_count)
     evaluate_count += 1
-    mse_list.append(loss_test / len(testloader))
+    mse_list.append((arousal_loss_test / len(testloader), valence_loss_test / len(testloader)))
 
 
 if __name__ == '__main__':
@@ -113,7 +121,7 @@ if __name__ == '__main__':
     # print(net.parameters())
 
     # train the network
-    epoch_num = 150
+    epoch_num = 100
     count = 0
     for epoch in range(epoch_num):  # Loop over the dataset multiple times
         for i, data in enumerate(trainloader, 0):
@@ -147,5 +155,7 @@ if __name__ == '__main__':
 
         print('Finished Training')
         evaluate(net, testloader)
+    
+    evaluate(net, totalloader)
 
     print(mse_list)

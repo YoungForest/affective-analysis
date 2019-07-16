@@ -5,8 +5,10 @@ matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import pandas as pd
 from sklearn.preprocessing import MinMaxScaler
+import numpy as np
+from scipy.interpolate import interp1d
 
-directory = 'predict_line'
+directory = 'smooth'
 
 if not os.path.exists(directory):
     os.mkdir(directory)
@@ -27,6 +29,15 @@ def getLabelFromClip(name):
 
 predict = pd.read_csv('predict.csv')
 
+def smooth(X, Y):
+    x_array = np.array(X)
+    y_array = np.array(Y)
+    x_new = np.linspace(x_array.max(), x_array.min(), 500)
+    f = interp1d(x_array, y_array, kind = 'quadratic')
+    y_smooth = f(x_new)
+
+    return x_new, y_smooth
+
 for name, movie in movies.movie_map.items():
     group_id = 0
     for group in movie.get_continuous_gourp(10):
@@ -36,9 +47,9 @@ for name, movie in movies.movie_map.items():
         predict_X = []
         predict_Y = []
         for clip in group:
-            # valence, arousal = getLabelFromClip(clip.name)
-            # X.append(arousal)
-            # Y.append(valence)
+            valence, arousal = getLabelFromClip(clip.name)
+            X.append(arousal)
+            Y.append(valence)
             Y.append(predict[predict['name'] ==
                                      clip.name]['ground_truth_valence'].iloc[0])
             X.append(predict[predict['name'] ==
@@ -49,11 +60,14 @@ for name, movie in movies.movie_map.items():
                                      clip.name]['arousal'].iloc[0])
         fig, ax = plt.subplots()
         fig.suptitle(f'arousal-valence-{name}-{group_id}')
-        print(predict_X)
         assert(len(predict_X) != 0)
-        line, = ax.plot(X, Y, '--', linewidth=2, marker='x')
-        line, = ax.plot(predict_X, predict_Y, 'r--',
-                        linewidth=2, marker='x')
+        x_smooth, y_smooth = smooth(X, Y)
+        line, = ax.plot(x_smooth, y_smooth, '--', linewidth=2)
+        ax.scatter(X, Y, marker='X')
+        predict_x_smooth, predict_y_smooth = smooth(predict_X, predict_Y)
+        line, = ax.plot(predict_x_smooth, predict_y_smooth, 'r--',
+                        linewidth=2)
+        ax.scatter(predict_x_smooth, predict_y_smooth, marker='X') 
         ax.scatter(X[0], Y[0], s=300)
         ax.scatter(predict_X[0], predict_Y[0], s=300)
         ax.set_xlabel('arousal')
