@@ -16,7 +16,7 @@ batch_size = 16
 # Training on GPU
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 print(device)
-date = '7_16'
+date = '7_17'
 writer = SummaryWriter('log/')
 
 mse_list = []
@@ -121,7 +121,7 @@ if __name__ == '__main__':
     # print(net.parameters())
 
     # train the network
-    epoch_num = 100
+    epoch_num = 200
     count = 0
     for epoch in range(epoch_num):  # Loop over the dataset multiple times
         for i, data in enumerate(trainloader, 0):

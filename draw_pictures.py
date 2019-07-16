@@ -8,7 +8,7 @@ from sklearn.preprocessing import MinMaxScaler
 import numpy as np
 from scipy.interpolate import interp1d
 
-directory = 'smooth'
+directory = 'scalar'
 
 if not os.path.exists(directory):
     os.mkdir(directory)
@@ -30,13 +30,14 @@ def getLabelFromClip(name):
 predict = pd.read_csv('predict.csv')
 
 def smooth(X, Y):
-    x_array = np.array(X)
-    y_array = np.array(Y)
-    x_new = np.linspace(x_array.max(), x_array.min(), 500)
-    f = interp1d(x_array, y_array, kind = 'quadratic')
-    y_smooth = f(x_new)
+    # x_array = np.array(X)
+    # y_array = np.array(Y)
+    # x_new = np.linspace(x_array.max(), x_array.min(), 500)
+    # f = interp1d(x_array, y_array, kind = 'quadratic')
+    # y_smooth = f(x_new)
 
-    return x_new, y_smooth
+    # return x_new, y_smooth
+    return X, Y
 
 for name, movie in movies.movie_map.items():
     group_id = 0
@@ -67,6 +68,8 @@ for name, movie in movies.movie_map.items():
         predict_x_smooth, predict_y_smooth = smooth(predict_X, predict_Y)
         line, = ax.plot(predict_x_smooth, predict_y_smooth, 'r--',
                         linewidth=2)
+        predict_X *= 10
+        predict_Y *= 10
         ax.scatter(predict_x_smooth, predict_y_smooth, marker='X') 
         ax.scatter(X[0], Y[0], s=300)
         ax.scatter(predict_X[0], predict_Y[0], s=300)
