@@ -16,7 +16,7 @@ batch_size = 16
 # Training on GPU
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 print(device)
-date = '7_19'
+date = '7_20'
 writer = SummaryWriter('log/')
 
 mse_list = []
@@ -76,8 +76,8 @@ def evaluate(net, testloader, test=True):
                    [0].item(), outputs[i][1].item(), test]
             result.append(row)
         outputs *= 1
-        arousal_loss = criterion(outputs[:, 0:1], valence)
-        valence_loss = criterion(outputs[:, 1:2], arousal)
+        valence_loss = criterion(outputs[:, 0:1], valence)
+        arousal_loss = criterion(outputs[:, 1:2], arousal)
         arousal_loss_test += arousal_loss.item()
         valence_loss_test += valence_loss.item()
 
@@ -92,7 +92,7 @@ def evaluate(net, testloader, test=True):
     mse_list.append((arousal_loss_test / len(testloader), valence_loss_test / len(testloader)))
 
 def predict_all():
-    train_dataset = LirisDataset(json_file='output-liris-resnet-34-kinetics.json', root_dir=movies.data_path,
+    train_dataset = LirisDataset(json_file='resnext-101-output.json', root_dir=movies.data_path,
                                  transform=True, window_size=1, ranking_file=movies.ranking_file, sets_file=movies.sets_file, sep='\t')
     split_point = int(len(train_dataset) * 3 / 4)
     totalloader = torch.utils.data.DataLoader(
@@ -111,7 +111,7 @@ def predict_all():
     predict_result.to_csv('predict.csv')
 
 if __name__ == '__main__':
-    train_dataset = LirisDataset(json_file='output-liris-resnet-34-kinetics.json', root_dir=movies.data_path,
+    train_dataset = LirisDataset(json_file='resnext-101-output.json', root_dir=movies.data_path,
                                  transform=True, window_size=1, ranking_file=movies.ranking_file, sets_file=movies.sets_file, sep='\t')
     split_point = int(len(train_dataset) * 3 / 4)
     trainloader = torch.utils.data.DataLoader(
@@ -133,7 +133,7 @@ if __name__ == '__main__':
     # print(net.parameters())
 
     # train the network
-    epoch_num = 200
+    epoch_num = 500
     count = 0
     for epoch in range(epoch_num):  # Loop over the dataset multiple times
         for i, data in enumerate(trainloader, 0):
