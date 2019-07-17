@@ -16,7 +16,7 @@ batch_size = 16
 # Training on GPU
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 print(device)
-date = '7_17'
+date = '7_18'
 writer = SummaryWriter('log/')
 
 mse_list = []
@@ -50,13 +50,12 @@ class LirisNet(nn.Module):
 
 
 evaluate_count = 0
+result = []
 
-
-def evaluate(net, testloader):
+def evaluate(net, testloader, test=True):
     criterion = nn.MSELoss()
     arousal_loss_test = 0.0
     valence_loss_test = 0.0
-    result = []
     for i, data in enumerate(testloader, 0):
         # get the inputs
         inputs = data['input']
@@ -74,7 +73,7 @@ def evaluate(net, testloader):
         # print(data)
         for i, item in enumerate(data['video']):
             row = [item, valence[i].item(), arousal[i].item(), outputs[i]
-                   [0].item(), outputs[i][1].item()]
+                   [0].item(), outputs[i][1].item(), test]
             result.append(row)
         outputs *= 1
         arousal_loss = criterion(outputs[:, 0:1], valence)
@@ -82,9 +81,6 @@ def evaluate(net, testloader):
         arousal_loss_test += arousal_loss.item()
         valence_loss_test += valence_loss.item()
 
-    predict_result = pd.DataFrame(data=result, columns=[
-                                  'name', 'ground_truth_valence', 'ground_truth_arousal', 'valence', 'arousal'])
-    predict_result.to_csv('predict.csv')
     print('arousal mse average: %f' % (arousal_loss_test / len(testloader)))
     print('valence mse average: %f' % (valence_loss_test / len(testloader)))
     global evaluate_count
@@ -95,6 +91,24 @@ def evaluate(net, testloader):
     evaluate_count += 1
     mse_list.append((arousal_loss_test / len(testloader), valence_loss_test / len(testloader)))
 
+def predict_all():
+    train_dataset = LirisDataset(json_file='output-liris-resnet-34-kinetics.json', root_dir=movies.data_path,
+                                 transform=True, window_size=1, ranking_file=movies.ranking_file, sets_file=movies.sets_file, sep='\t')
+    split_point = int(len(train_dataset) * 3 / 4)
+    totalloader = torch.utils.data.DataLoader(
+        train_dataset, batch_size=batch_size, shuffle=False)
+    trainloader = torch.utils.data.DataLoader(
+        torch.utils.data.Subset(train_dataset, range(0, split_point)), batch_size=batch_size, shuffle=False)
+    testloader = torch.utils.data.DataLoader(
+        torch.utils.data.Subset(train_dataset, range(split_point, len(train_dataset))), batch_size=batch_size, shuffle=False)
+    net = LirisNet().cuda()
+    net.load_state_dict(torch.load(
+        '/data/pth/nn-7_16-epoch-99.pth'))
+    evaluate(net, trainloader, False)
+    evaluate(net, testloader, True)
+    predict_result = pd.DataFrame(data=result, columns=[
+                                  'name', 'ground_truth_valence', 'ground_truth_arousal', 'valence', 'arousal', 'test'])
+    predict_result.to_csv('predict.csv')
 
 if __name__ == '__main__':
     train_dataset = LirisDataset(json_file='output-liris-resnet-34-kinetics.json', root_dir=movies.data_path,
@@ -112,8 +126,8 @@ if __name__ == '__main__':
     if torch.cuda.device_count() > 1:
         print("Let's use", torch.cuda.device_count(), "GPUs!")
         net = nn.DataParallel(net)
-    # net.load_state_dict(torch.load(
-    #     '/data/pth/nn-7_2-epoch-80.pth'))
+    net.load_state_dict(torch.load(
+        '/data/pth/nn-7_17-epoch-199.pth'))
 
     # # define a Loss function and optimizer
     criterion = nn.MSELoss()

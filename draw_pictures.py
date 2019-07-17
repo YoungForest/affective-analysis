@@ -27,7 +27,7 @@ def getLabelFromClip(name):
     return scores[scores['name'] == name]['valenceRankRescaled'].iloc[0], scores[scores['name'] == name]['arousalRankRescaled'].iloc[0]
 
 
-predict = pd.read_csv('predict.csv')
+predict = pd.read_csv('predict_csv.csv')
 
 def smooth(X, Y):
     # x_array = np.array(X)
@@ -47,6 +47,7 @@ for name, movie in movies.movie_map.items():
         Y = []
         predict_X = []
         predict_Y = []
+        test = []
         for clip in group:
             valence, arousal = getLabelFromClip(clip.name)
             X.append(arousal)
@@ -59,18 +60,23 @@ for name, movie in movies.movie_map.items():
                                      clip.name]['valence'].iloc[0])
             predict_X.append(predict[predict['name'] ==
                                      clip.name]['arousal'].iloc[0])
+            test.append(predict[predict['name'] ==
+                                     clip.name]['test'].iloc[0])
+
         fig, ax = plt.subplots()
         fig.suptitle(f'arousal-valence-{name}-{group_id}')
         assert(len(predict_X) != 0)
         x_smooth, y_smooth = smooth(X, Y)
-        line, = ax.plot(x_smooth, y_smooth, '--', linewidth=2)
+        line, = ax.plot(x_smooth, y_smooth, 'b--', linewidth=2)
         ax.scatter(X, Y, marker='X')
+        # 放缩
+        times = 20 
+        predict_X = [x * times for x in predict_X]
+        predict_Y = [x * times for x in predict_Y]
         predict_x_smooth, predict_y_smooth = smooth(predict_X, predict_Y)
         line, = ax.plot(predict_x_smooth, predict_y_smooth, 'r--',
                         linewidth=2)
-        predict_X *= 10
-        predict_Y *= 10
-        ax.scatter(predict_x_smooth, predict_y_smooth, marker='X') 
+        ax.scatter(predict_X, predict_Y, c=['g' if x else 'y' for x in test], marker='X') 
         ax.scatter(X[0], Y[0], s=300)
         ax.scatter(predict_X[0], predict_Y[0], s=300)
         ax.set_xlabel('arousal')
