@@ -16,7 +16,7 @@ batch_size = 16
 # Training on GPU
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 print(device)
-date = '7_18'
+date = '7_19'
 writer = SummaryWriter('log/')
 
 mse_list = []
@@ -114,8 +114,6 @@ if __name__ == '__main__':
     train_dataset = LirisDataset(json_file='output-liris-resnet-34-kinetics.json', root_dir=movies.data_path,
                                  transform=True, window_size=1, ranking_file=movies.ranking_file, sets_file=movies.sets_file, sep='\t')
     split_point = int(len(train_dataset) * 3 / 4)
-    totalloader = torch.utils.data.DataLoader(
-        train_dataset, batch_size=batch_size, shuffle=False)
     trainloader = torch.utils.data.DataLoader(
         torch.utils.data.Subset(train_dataset, range(0, split_point)), batch_size=batch_size, shuffle=False)
     testloader = torch.utils.data.DataLoader(
@@ -127,7 +125,7 @@ if __name__ == '__main__':
         print("Let's use", torch.cuda.device_count(), "GPUs!")
         net = nn.DataParallel(net)
     net.load_state_dict(torch.load(
-        '/data/pth/nn-7_17-epoch-199.pth'))
+        '/data/pth/nn-7_18-epoch-199.pth'))
 
     # # define a Loss function and optimizer
     criterion = nn.MSELoss()
@@ -170,6 +168,6 @@ if __name__ == '__main__':
         print('Finished Training')
         evaluate(net, testloader)
     
-    evaluate(net, totalloader)
+    evaluate(net, testloader)
 
     print(mse_list)
