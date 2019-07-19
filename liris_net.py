@@ -11,7 +11,7 @@ import movies
 from tensorboardX import SummaryWriter
 import pandas as pd
 
-batch_size = 16
+batch_size = 4
 
 # Training on GPU
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -29,7 +29,7 @@ class LirisNet(nn.Module):
 
     def __init__(self):
         super(LirisNet, self).__init__()
-        self.input_dim = 14336
+        self.input_dim = 12288
         self.hidden_dim = 2048
         self.num_directions = 2
         self.num_layers = 2
@@ -124,8 +124,8 @@ if __name__ == '__main__':
     if torch.cuda.device_count() > 1:
         print("Let's use", torch.cuda.device_count(), "GPUs!")
         net = nn.DataParallel(net)
-    net.load_state_dict(torch.load(
-        '/data/pth/nn-7_18-epoch-199.pth'))
+    # net.load_state_dict(torch.load(
+    #     '/data/pth/nn-7_18-epoch-199.pth'))
 
     # # define a Loss function and optimizer
     criterion = nn.MSELoss()

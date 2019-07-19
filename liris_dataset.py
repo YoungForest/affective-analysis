@@ -107,14 +107,16 @@ class LirisDataset(Dataset):
         sample = self.clip_feature_map[name]
         sample['input'] = []
 
-        for s in sample['clips']:
+        # align feature
+        for i in range(min(len(sample['clips']), self.mi)):
+            s = sample['clips'][i]
             sample['input'] += s['features']
 
         # uniform the input length
         # align all the features to the left and pad to the right with zeros
-        if self.transform:
-            for _ in range(len(sample['clips']), self.ma):
-                sample['input'] += [0] * len(sample['clips'][0]['features'])
+        # if self.transform:
+        #     for _ in range(len(sample['clips']), self.ma):
+        #         sample['input'] += [0] * len(sample['clips'][0]['features'])
 
         return sample
 
