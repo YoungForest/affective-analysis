@@ -16,7 +16,7 @@ batch_size = 4
 # Training on GPU
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 print(device)
-date = '7_20'
+date = '7_22'
 writer = SummaryWriter('log/')
 
 mse_list = []
@@ -52,7 +52,7 @@ class LirisNet(nn.Module):
 evaluate_count = 0
 result = []
 
-def evaluate(net, testloader, test=True):
+def evaluate(net, testloader, test=True, label='test'):
     criterion = nn.MSELoss()
     arousal_loss_test = 0.0
     valence_loss_test = 0.0
@@ -81,12 +81,12 @@ def evaluate(net, testloader, test=True):
         arousal_loss_test += arousal_loss.item()
         valence_loss_test += valence_loss.item()
 
-    print('arousal mse average: %f' % (arousal_loss_test / len(testloader)))
-    print('valence mse average: %f' % (valence_loss_test / len(testloader)))
+    print(f'{label} arousal mse average: {arousal_loss_test / len(testloader)}')
+    print(f'{label} valence mse average: {valence_loss_test / len(testloader)}')
     global evaluate_count
-    writer.add_scalar(f'predict_arousal_test_average_{date}',
+    writer.add_scalar(f'predict_arousal_{label}_average_{date}',
                       arousal_loss_test / len(testloader), evaluate_count)
-    writer.add_scalar(f'predict_valence_test_average_{date}',
+    writer.add_scalar(f'predict_valence_{label}_average_{date}',
                       valence_loss_test / len(testloader), evaluate_count)
     evaluate_count += 1
     mse_list.append((arousal_loss_test / len(testloader), valence_loss_test / len(testloader)))
@@ -113,11 +113,14 @@ def predict_all():
 if __name__ == '__main__':
     train_dataset = LirisDataset(json_file='resnext-101-output.json', root_dir=movies.data_path,
                                  transform=True, window_size=1, ranking_file=movies.ranking_file, sets_file=movies.sets_file, sep='\t')
-    split_point = int(len(train_dataset) * 3 / 4)
+    train_split_point = int(len(train_dataset) * 1 / 2)
+    valid_split_point = int(len(train_dataset) * 3 / 4)
     trainloader = torch.utils.data.DataLoader(
-        torch.utils.data.Subset(train_dataset, range(0, split_point)), batch_size=batch_size, shuffle=False)
+        torch.utils.data.Subset(train_dataset, range(0, train_split_point)), batch_size=batch_size, shuffle=False)
+    validloader = torch.utils.data.DataLoader(
+        torch.utils.data.Subset(train_dataset, range(train_split_point, valid_split_point)), batch_size=batch_size, shuffle=False)
     testloader = torch.utils.data.DataLoader(
-        torch.utils.data.Subset(train_dataset, range(split_point, len(train_dataset))), batch_size=batch_size, shuffle=False)
+        torch.utils.data.Subset(train_dataset, range(valid_split_point, len(train_dataset))), batch_size=batch_size, shuffle=False)
 
     # new a Neural Network instance
     net = LirisNet().cuda()
@@ -136,6 +139,7 @@ if __name__ == '__main__':
     epoch_num = 500
     count = 0
     for epoch in range(epoch_num):  # Loop over the dataset multiple times
+        train_loss = 0.0
         for i, data in enumerate(trainloader, 0):
             # get the inputs
             inputs = data['input']
@@ -157,17 +161,17 @@ if __name__ == '__main__':
             optimizer.step()
 
             # print statistics
-            writer.add_scalar(f'train_{date}', loss.item(), count)
-            count += 1
-            print(
-                f'Epoch: {evaluate_count}, index: {i}, count: {count}: {loss.item()}')
+            train_loss += loss.item()
+            
+        writer.add_scalar(f'train_loss_{date}', train_loss / len(trainloader), epoch)
+        print(f'Epoch: {epoch}: {train_loss / len(trainloader)}')
         # Serialization semantics, save the trained model
         torch.save(net.state_dict(
         ), f'/data/pth/nn-{date}-epoch-{evaluate_count}.pth')
 
         print('Finished Training')
-        evaluate(net, testloader)
+        evaluate(net, validloader, label='valid')
     
-    evaluate(net, testloader)
+    evaluate(net, testloader, label='test')
 
     print(mse_list)
