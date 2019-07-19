@@ -2,10 +2,15 @@ import os
 import glob
 import subprocess
 
-videos = glob.glob("../movieclips/*.mp4")
+data_path = '/data/LIRIS-ACCEDE/LIRIS-ACCEDE-data/data'
+audio_path = '/data/LIRIS-ACCEDE/LIRIS-ACCEDE-data/data/audio'
+videos = glob.glob("/data/LIRIS-ACCEDE/LIRIS-ACCEDE-data/data/*.mp4")
 
 for video in videos:
-    filename, _ = os.path.splitext(video)
-    audio = filename + ".wav"
+    v = os.path.split(video)[-1]
+    filename, _ = os.path.splitext(v)
+    audio = os.path.join(audio_path, filename) + ".wav"
+    if os.path.exists(audio):
+        continue
     command = "ffmpeg -i %s %s" % (video, audio)
     subprocess.call(command, shell=True)
