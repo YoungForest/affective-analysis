@@ -121,7 +121,7 @@ class LirisDataset(Dataset):
         name = clip.name
         sample = self.clip_feature_map[name]
         sample['input'] = []
-        sample['audio'] = self.audio[name][-12288:]
+        sample['audio'] = self.audio[name][::5]
 
         # align feature
         for i in range(min(len(sample['clips']), self.mi)):

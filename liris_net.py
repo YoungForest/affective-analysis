@@ -16,7 +16,7 @@ batch_size = 4
 # Training on GPU
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 print(device)
-date = '7_22'
+date = '7_23'
 writer = SummaryWriter('log/')
 
 mse_list = []
