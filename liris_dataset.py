@@ -11,6 +11,7 @@ import pickle
 from sklearn.preprocessing import MinMaxScaler
 import movies
 from functools import reduce
+import torchaudio
 
 
 class LirisDataset(Dataset):
@@ -32,12 +33,26 @@ class LirisDataset(Dataset):
         self.data_json = json.loads(data)
         mi = 1000
         ma = 0
+        self.audio = {}
+        self.audio_min_length = 1000000
+        self.audio_max_length = 0
         for d in self.data_json:
             l = len(d['clips'])
             if mi > l:
                 mi = l
             if ma < l:
                 ma = l
+
+            # audio preprocessing
+            # https://github.com/pytorch/tutorials/blob/master/beginner_source/audio_classifier_tutorial.py
+            video_name = d['video']
+            file_name, _ = os.path.splitext(video_name)
+            audio_name = file_name + ".wav"
+            sound, _ = torchaudio.load(os.path.join('/data/LIRIS-ACCEDE/LIRIS-ACCEDE-data/data/audio', audio_name), normalization=True)
+            length = sound.shape[1]
+            self.audio_max_length = max(self.audio_max_length, length)
+            self.audio_min_length = min(self.audio_min_length, length)
+            self.audio[video_name] = sound[0]
         self.mi = mi
         self.ma = ma
 
@@ -106,6 +121,7 @@ class LirisDataset(Dataset):
         name = clip.name
         sample = self.clip_feature_map[name]
         sample['input'] = []
+        sample['audio'] = self.audio[name][-12288:]
 
         # align feature
         for i in range(min(len(sample['clips']), self.mi)):
@@ -128,7 +144,7 @@ class LirisDataset(Dataset):
         sample['arousalScore'] = self.scores[self.scores['name']
                                              == sample['video']]['arousalRankRescaled'].iloc[0]
 
-        return {'video': sample['video'], 'input': torch.from_numpy(np.array(sample['input'])).float(), 'labels': torch.from_numpy(np.array([sample['valenceScore'], sample['arousalScore']])).float()}
+        return {'video': sample['video'], 'audio': sample['audio'], 'input': torch.from_numpy(np.array(sample['input'])).float(), 'labels': torch.from_numpy(np.array([sample['valenceScore'], sample['arousalScore']])).float()}
 
 
 def getLirisDataset(path, train=True, validate=False):

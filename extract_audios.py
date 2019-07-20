@@ -12,5 +12,6 @@ for video in videos:
     audio = os.path.join(audio_path, filename) + ".wav"
     if os.path.exists(audio):
         continue
-    command = "ffmpeg -i %s %s" % (video, audio)
+    # 1 channel, sample rate 11025
+    command = "ffmpeg -i %s -ar 11025 -ac 1 %s" % (video, audio)
     subprocess.call(command, shell=True)

@@ -142,7 +142,7 @@ if __name__ == '__main__':
         train_loss = 0.0
         for i, data in enumerate(trainloader, 0):
             # get the inputs
-            inputs = data['input']
+            inputs = torch.cat((data['input'][:, :6144], data['audio'][:, :6144]), 1)
             valence = data['labels'][:, 0:1]
             arousal = data['labels'][:, 1:2]
             ground_truth = data['labels']
