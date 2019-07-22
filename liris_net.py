@@ -16,7 +16,7 @@ batch_size = 4
 # Training on GPU
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 print(device)
-date = '7_23'
+date = '7_24'
 writer = SummaryWriter('log/')
 
 mse_list = []
@@ -83,12 +83,10 @@ def evaluate(net, testloader, test=True, label='test'):
 
     print(f'{label} arousal mse average: {arousal_loss_test / len(testloader)}')
     print(f'{label} valence mse average: {valence_loss_test / len(testloader)}')
-    global evaluate_count
     writer.add_scalar(f'predict_arousal_{label}_average_{date}',
                       arousal_loss_test / len(testloader), evaluate_count)
     writer.add_scalar(f'predict_valence_{label}_average_{date}',
                       valence_loss_test / len(testloader), evaluate_count)
-    evaluate_count += 1
     mse_list.append((arousal_loss_test / len(testloader), valence_loss_test / len(testloader)))
 
 def predict_all():
@@ -142,7 +140,7 @@ if __name__ == '__main__':
         train_loss = 0.0
         for i, data in enumerate(trainloader, 0):
             # get the inputs
-            inputs = torch.cat((data['input'][:, :6144], data['audio'][:, :6144]), 1)
+            inputs = torch.cat((data['input'][:, ::2][:, :6144], data['audio'][:, ::3][:, :6144]), 1)
             valence = data['labels'][:, 0:1]
             arousal = data['labels'][:, 1:2]
             ground_truth = data['labels']
@@ -171,6 +169,9 @@ if __name__ == '__main__':
 
         print('Finished Training')
         evaluate(net, validloader, label='valid')
+        evaluate(net, testloader, label='test')
+        evaluate_count += 1
+
     
     evaluate(net, testloader, label='test')
 
