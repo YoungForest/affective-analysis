@@ -16,7 +16,7 @@ batch_size = 4
 # Training on GPU
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 print(device)
-date = '7_24'
+date = '7_25'
 writer = SummaryWriter('log/')
 
 mse_list = []
@@ -140,7 +140,7 @@ if __name__ == '__main__':
         train_loss = 0.0
         for i, data in enumerate(trainloader, 0):
             # get the inputs
-            inputs = torch.cat((data['input'][:, ::2][:, :6144], data['audio'][:, ::3][:, :6144]), 1)
+            inputs = torch.cat((data['input'][:, :6144], data['audio'][:, :6144]), 1)
             valence = data['labels'][:, 0:1]
             arousal = data['labels'][:, 1:2]
             ground_truth = data['labels']
