@@ -11,12 +11,12 @@ import movies
 from tensorboardX import SummaryWriter
 import pandas as pd
 
-batch_size = 4
+batch_size = 4  # squence length
 
 # Training on GPU
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 print(device)
-date = '7_25'
+date = '7_26'
 writer = SummaryWriter('log/')
 
 mse_list = []
@@ -37,16 +37,18 @@ class LirisNet(nn.Module):
         self.lstm = nn.LSTM(input_size=self.input_dim, hidden_size=self.hidden_dim,
                             num_layers=self.num_layers, bidirectional=(self.num_directions == 2))
         self.linear = nn.Linear(
-            self.num_directions*self.hidden_dim*self.batch_size, 2 * self.batch_size)
+            self.num_directions*self.hidden_dim, 2)
 
     def forward(self, x):
-        a, b = x.shape
-        x = x.view(1, a, b)
-        # lstm input: (seq_len, batch, input_size), (1, 16, 14336)
+        a, b = x.shape  # seqence length, input dim
+        assert(a == self.batch_size)
+        x = x.view(a, 1, b)
+        # lstm input: (seq_len, batch, input_size)
+        # output: seq_len, batch, num_directions * hidden_size
         lstm_out, _ = self.lstm(x)
-        y_pred = self.linear(lstm_out[-1].reshape(1, -1).squeeze())
+        y_pred = self.linear(lstm_out.view(a, self.num_directions*self.hidden_dim))
 
-        return y_pred.reshape(self.batch_size, 2)
+        return y_pred
 
 
 evaluate_count = 0
@@ -138,6 +140,7 @@ if __name__ == '__main__':
     count = 0
     for epoch in range(epoch_num):  # Loop over the dataset multiple times
         train_loss = 0.0
+        net.train()
         for i, data in enumerate(trainloader, 0):
             # get the inputs
             inputs = torch.cat((data['input'][:, :6144], data['audio'][:, :6144]), 1)
@@ -153,6 +156,7 @@ if __name__ == '__main__':
             optimizer.zero_grad()
 
             # forward + backward + optimize
+            inputs = inputs.requires_grad_()
             outputs = net(inputs)
             loss = criterion(outputs, ground_truth)
             loss.backward()
@@ -168,11 +172,9 @@ if __name__ == '__main__':
         ), f'/data/pth/nn-{date}-epoch-{evaluate_count}.pth')
 
         print('Finished Training')
+        net.eval()
         evaluate(net, validloader, label='valid')
         evaluate(net, testloader, label='test')
         evaluate_count += 1
-
     
-    evaluate(net, testloader, label='test')
-
     print(mse_list)

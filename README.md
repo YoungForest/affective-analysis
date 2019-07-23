@@ -119,9 +119,5 @@ test_average_7_3: batch调大到128。
 7_13: 
 7_14: 加hidden_dim 2048
 7_15: 加lstm层数 5
-
-
-## 网络结构
-
-特征维数：
-14336
+7_25: add aduio raw feature
+7_26: add batch norm layer
