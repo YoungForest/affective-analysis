@@ -16,7 +16,7 @@ batch_size = 4  # squence length
 # Training on GPU
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 print(device)
-date = '7_26'
+date = '7_27'
 writer = SummaryWriter('log/')
 
 mse_list = []
@@ -34,19 +34,24 @@ class LirisNet(nn.Module):
         self.num_directions = 2
         self.num_layers = 2
         self.batch_size = batch_size
+        self.bn1 = nn.BatchNorm1d(self.input_dim)
         self.lstm = nn.LSTM(input_size=self.input_dim, hidden_size=self.hidden_dim,
                             num_layers=self.num_layers, bidirectional=(self.num_directions == 2))
+        self.bn2 = nn.BatchNorm1d(self.num_directions*self.hidden_dim)
         self.linear = nn.Linear(
             self.num_directions*self.hidden_dim, 2)
 
     def forward(self, x):
         a, b = x.shape  # seqence length, input dim
         assert(a == self.batch_size)
+        x = self.bn1(x)
         x = x.view(a, 1, b)
         # lstm input: (seq_len, batch, input_size)
         # output: seq_len, batch, num_directions * hidden_size
         lstm_out, _ = self.lstm(x)
-        y_pred = self.linear(lstm_out.view(a, self.num_directions*self.hidden_dim))
+        lstm_out = lstm_out.view(a, self.num_directions*self.hidden_dim)
+        lstm_out = self.bn2(lstm_out)
+        y_pred = self.linear(lstm_out)
 
         return y_pred
 
@@ -117,10 +122,8 @@ if __name__ == '__main__':
     valid_split_point = int(len(train_dataset) * 3 / 4)
     trainloader = torch.utils.data.DataLoader(
         torch.utils.data.Subset(train_dataset, range(0, train_split_point)), batch_size=batch_size, shuffle=False)
-    validloader = torch.utils.data.DataLoader(
-        torch.utils.data.Subset(train_dataset, range(train_split_point, valid_split_point)), batch_size=batch_size, shuffle=False)
     testloader = torch.utils.data.DataLoader(
-        torch.utils.data.Subset(train_dataset, range(valid_split_point, len(train_dataset))), batch_size=batch_size, shuffle=False)
+        torch.utils.data.Subset(train_dataset, range(train_split_point, len(train_dataset))), batch_size=batch_size, shuffle=False)
 
     # new a Neural Network instance
     net = LirisNet().cuda()
@@ -143,7 +146,7 @@ if __name__ == '__main__':
         net.train()
         for i, data in enumerate(trainloader, 0):
             # get the inputs
-            inputs = torch.cat((data['input'][:, :6144], data['audio'][:, :6144]), 1)
+            inputs = torch.cat((data['input'][:, ::2][:, :6144], data['audio'][:, ::2][:, :6144]), 1)
             valence = data['labels'][:, 0:1]
             arousal = data['labels'][:, 1:2]
             ground_truth = data['labels']
@@ -173,7 +176,6 @@ if __name__ == '__main__':
 
         print('Finished Training')
         net.eval()
-        evaluate(net, validloader, label='valid')
         evaluate(net, testloader, label='test')
         evaluate_count += 1
     
