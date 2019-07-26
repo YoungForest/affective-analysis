@@ -16,7 +16,7 @@ batch_size = 4  # squence length
 # Training on GPU
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 print(device)
-date = '7_29'
+date = '7_30'
 writer = SummaryWriter('log/')
 
 mse_list = []
@@ -44,7 +44,7 @@ class LirisNet(nn.Module):
     def forward(self, x):
         a, b = x.shape  # seqence length, input dim
         assert(a == self.batch_size)
-        x = self.bn1(x)
+        # x = self.bn1(x)
         x = x.view(a, 1, b)
         # lstm input: (seq_len, batch, input_size)
         # output: seq_len, batch, num_directions * hidden_size
