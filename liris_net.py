@@ -16,7 +16,7 @@ batch_size = 4  # squence length
 # Training on GPU
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 print(device)
-date = '7_30'
+date = '7_31'
 writer = SummaryWriter('log/')
 
 mse_list = []
@@ -44,6 +44,7 @@ class LirisNet(nn.Module):
     def forward(self, x):
         a, b = x.shape  # seqence length, input dim
         assert(a == self.batch_size)
+        assert(b == self.input_dim)
         # x = self.bn1(x)
         x = x.view(a, 1, b)
         # lstm input: (seq_len, batch, input_size)
@@ -146,7 +147,7 @@ if __name__ == '__main__':
         net.train()
         for i, data in enumerate(trainloader, 0):
             # get the inputs
-            inputs = torch.cat((data['input'][:, ::2][:, :6144], data['audio'][:, ::2][:, :6144]), 1)
+            inputs = torch.cat((data['input'][:, :6144], data['audio'][:, :6144]), 1)
             valence = data['labels'][:, 0:1]
             arousal = data['labels'][:, 1:2]
             ground_truth = data['labels']
